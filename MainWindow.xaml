@@ -1,0 +1,547 @@
+﻿<Window x:Class="DocTransform.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:viewmodels="clr-namespace:DocTransform.ViewModels"
+        mc:Ignorable="d"
+        Title="Excel到Word数据映射工具"
+        Height="680" Width="950"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{materialDesign:MaterialDesignFont}"
+        WindowStartupLocation="CenterScreen"
+        AllowDrop="True"
+        WindowStyle="None"
+        ResizeMode="CanResizeWithGrip"
+        AllowsTransparency="True"
+        BorderThickness="0">
+
+    <Window.DataContext>
+        <viewmodels:MainViewModel />
+    </Window.DataContext>
+
+    <materialDesign:DialogHost Identifier="RootDialog">
+        <Grid>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- 自定义标题栏 -->
+            <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryDark" Padding="8"
+                                      materialDesign:ElevationAssist.Elevation="Dp4"
+                                      MouseLeftButtonDown="ColorZone_MouseLeftButtonDown">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 图标和标题 -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="8,0">
+                        <materialDesign:PackIcon Kind="FileReplace" Height="24" Width="24" VerticalAlignment="Center" />
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" FontSize="16" FontWeight="Medium">
+                            Excel到Word数据映射工具
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- 窗口控制按钮 -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                Click="MinimizeButton_Click"
+                                ToolTip="最小化">
+                            <materialDesign:PackIcon Kind="WindowMinimize" />
+                        </Button>
+                        <Button x:Name="MaximizeButton" Style="{StaticResource MaterialDesignFlatButton}"
+                                Click="MaximizeButton_Click"
+                                ToolTip="最大化">
+                            <materialDesign:PackIcon Kind="WindowMaximize" />
+                        </Button>
+                        <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                Click="CloseButton_Click"
+                                ToolTip="关闭">
+                            <materialDesign:PackIcon Kind="WindowClose" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:ColorZone>
+
+
+            <materialDesign:Card Grid.Row="1" Margin="16" UniformCornerRadius="8" Padding="0"
+                                 AllowDrop="True">
+                <DockPanel AllowDrop="True">
+
+                    <!-- 底部状态栏 -->
+                    <materialDesign:Card DockPanel.Dock="Bottom" Margin="0"
+                                         materialDesign:ElevationAssist.Elevation="Dp2"
+                                         UniformCornerRadius="0">
+                        <Grid Margin="16,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 状态消息 -->
+                            <TextBlock Grid.Column="0" Text="{Binding StatusMessage}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+
+                            <!-- 处理进度 -->
+                            <Border Grid.Column="1" Margin="8,0,0,0"
+                                    Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock VerticalAlignment="Center">
+                                    <Run Text="{Binding ProcessedItems, Mode=OneWay}" />
+                                    <Run Text="/" />
+                                    <Run Text="{Binding TotalItems, Mode=OneWay}" />
+                                </TextBlock>
+                            </Border>
+
+                            <!-- 按钮：打开输出文件夹 -->
+                            <Button Grid.Column="2" Margin="16,0,0,0"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding OpenOutputFolderCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="FolderOpen" VerticalAlignment="Center" />
+                                    <TextBlock Margin="8,0,0,0" Text="打开输出文件夹" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </materialDesign:Card>
+
+                    <!-- 主要内容区 -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" AllowDrop="True">
+                        <StackPanel Margin="16" AllowDrop="True">
+
+                            <!-- 拖放提示 - 使其更醒目 -->
+                            <materialDesign:Card Margin="0,0,0,16"
+                                                 UniformCornerRadius="4"
+                                                 Background="{DynamicResource MaterialDesignLightBlueBackground}"
+                                                 BorderBrush="{DynamicResource PrimaryHueMidBrush}"
+                                                 BorderThickness="1"
+                                                 AllowDrop="True">
+                                <Grid Margin="16,12">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="DragVariant" VerticalAlignment="Center"
+                                                                 Width="24" Height="24"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <TextBlock Margin="12,0,0,0" Text="您可以将Excel文件或Word模板文件拖放到此窗口"
+                                                   VerticalAlignment="Center"
+                                                   FontWeight="Medium" />
+                                    </StackPanel>
+                                </Grid>
+                            </materialDesign:Card>
+
+                            <!-- 文件选择区域 -->
+                            <materialDesign:Card Margin="0,0,0,16" UniformCornerRadius="4">
+                                <StackPanel Margin="16">
+                                    <TextBlock Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                               Margin="0,0,0,16" FontWeight="Medium">
+                                        文件选择
+                                    </TextBlock>
+
+                                    <!-- Excel文件选择 -->
+                                    <DockPanel Margin="0,0,0,8">
+                                        <Button DockPanel.Dock="Right" Margin="8,0,0,0"
+                                                Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                                Command="{Binding BrowseExcelFileCommand}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="FileExcel" />
+                                                <TextBlock Margin="8,0,0,0" Text="浏览" />
+                                            </StackPanel>
+                                        </Button>
+                                        <materialDesign:Card>
+                                            <DockPanel Margin="8">
+                                                <materialDesign:PackIcon Kind="FileExcel" DockPanel.Dock="Left"
+                                                                         VerticalAlignment="Center"
+                                                                         Foreground="#1F7244" />
+                                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
+                                                           Text="{Binding ExcelFilePath, Converter={StaticResource FilenameOnlyConverter}}"
+                                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding ExcelFilePath}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock"
+                                                               BasedOn="{StaticResource MaterialDesignTextBlock}">
+                                                            <Setter Property="Text" Value="未选择Excel文件" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding ExcelFilePath}" Value="">
+                                                                    <Setter Property="Text" Value="未选择Excel文件" />
+                                                                    <Setter Property="Foreground"
+                                                                            Value="{DynamicResource MaterialDesignBodyLight}" />
+                                                                    <Setter Property="FontStyle" Value="Italic" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DockPanel>
+                                        </materialDesign:Card>
+                                    </DockPanel>
+
+                                    <!-- Word模板选择 -->
+                                    <DockPanel Margin="0,0,0,8">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <Button Margin="8,0,8,0"
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    Command="{Binding CheckPlaceholdersCommand}"
+                                                    ToolTip="检查模板中的占位符"
+                                                    Visibility="{Binding WordTemplatePath, Converter={StaticResource StringToVisibilityConverter}}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="FileFind" />
+                                                    <TextBlock Margin="8,0,0,0" Text="检查占位符" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Margin="0,0,0,0"
+                                                    Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                                    Command="{Binding BrowseWordTemplateCommand}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="FileWord" />
+                                                    <TextBlock Margin="8,0,0,0" Text="浏览" />
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+
+                                        <materialDesign:Card>
+                                            <DockPanel Margin="8">
+                                                <materialDesign:PackIcon Kind="FileWord" DockPanel.Dock="Left"
+                                                                         VerticalAlignment="Center"
+                                                                         Foreground="#2B579A" />
+                                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
+                                                           Text="{Binding WordTemplatePath, Converter={StaticResource FilenameOnlyConverter}}"
+                                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding WordTemplatePath}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock"
+                                                               BasedOn="{StaticResource MaterialDesignTextBlock}">
+                                                            <Setter Property="Text" Value="未选择Word模板" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding WordTemplatePath}"
+                                                                             Value="">
+                                                                    <Setter Property="Text" Value="未选择Word模板" />
+                                                                    <Setter Property="Foreground"
+                                                                            Value="{DynamicResource MaterialDesignBodyLight}" />
+                                                                    <Setter Property="FontStyle" Value="Italic" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DockPanel>
+                                        </materialDesign:Card>
+                                    </DockPanel>
+
+                                    <!-- 输出目录选择 -->
+                                    <DockPanel Margin="0,0,0,8">
+                                        <Button DockPanel.Dock="Right" Margin="8,0,0,0"
+                                                Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                                Command="{Binding BrowseOutputDirectoryCommand}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="FolderOutline" />
+                                                <TextBlock Margin="8,0,0,0" Text="浏览" />
+                                            </StackPanel>
+                                        </Button>
+                                        <materialDesign:Card>
+                                            <DockPanel Margin="8">
+                                                <materialDesign:PackIcon Kind="FolderOutline" DockPanel.Dock="Left"
+                                                                         VerticalAlignment="Center" />
+                                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
+                                                           Text="{Binding OutputDirectory}" TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding OutputDirectory}" />
+                                            </DockPanel>
+                                        </materialDesign:Card>
+                                    </DockPanel>
+
+                                    <!-- 输出文件名模板设置 -->
+                                    <TextBlock Text="输出文件名模板" Style="{StaticResource MaterialDesignBody1TextBlock}"
+                                               Margin="0,8,0,8" />
+                                    <materialDesign:Card>
+                                        <TextBox Text="{Binding OutputFileNameTemplate}" Margin="8"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 materialDesign:HintAssist.Hint="使用 {列名} 作为占位符，例如 {姓名}_{序号}_{时间}"
+                                                 ToolTip="可使用的内置变量：{序号}、{时间}、{日期}"
+                                                 BorderThickness="0" />
+                                    </materialDesign:Card>
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- 列选择区域 -->
+                            <materialDesign:Card Margin="0,0,0,16" UniformCornerRadius="4">
+                                <StackPanel Margin="16">
+                                    <TextBlock Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                               Margin="0,0,0,16" FontWeight="Medium">
+                                        选择需要映射的列
+                                    </TextBlock>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- 可用列列表 -->
+                                        <materialDesign:Card Grid.Column="0" UniformCornerRadius="4">
+                                            <DockPanel>
+                                                <materialDesign:ColorZone Mode="PrimaryLight" DockPanel.Dock="Top"
+                                                                          CornerRadius="4,4,0,0">
+                                                    <StackPanel Orientation="Horizontal" Margin="8">
+                                                        <materialDesign:PackIcon Kind="FormatListBulleted"
+                                                            VerticalAlignment="Center" />
+                                                        <TextBlock Text="可用列" Margin="8,0,0,0" FontWeight="Medium" />
+                                                    </StackPanel>
+                                                </materialDesign:ColorZone>
+                                                <ListBox ItemsSource="{Binding AvailableColumns}"
+                                                         Height="200"
+                                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <materialDesign:Card Margin="2" UniformCornerRadius="4">
+                                                                <DockPanel Width="180">
+                                                                    <Button DockPanel.Dock="Right"
+                                                                            Style="{StaticResource MaterialDesignIconButton}"
+                                                                            Command="{Binding DataContext.MoveColumnToSelectedCommand,
+                                                                                RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <materialDesign:PackIcon Kind="ArrowRight" />
+                                                                    </Button>
+                                                                    <TextBlock Text="{Binding}"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="8,0"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               ToolTip="{Binding}" />
+                                                                </DockPanel>
+                                                            </materialDesign:Card>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                    <ListBox.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ListBox.ItemsPanel>
+                                                </ListBox>
+                                            </DockPanel>
+                                        </materialDesign:Card>
+
+                                        <!-- 中间控制按钮 -->
+                                        <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center"
+                                                    Margin="16,0">
+                                            <Button Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                                    Margin="0,4" Command="{Binding MoveAllColumnsToSelectedCommand}">
+                                                <materialDesign:PackIcon Kind="ArrowRightBold" />
+                                            </Button>
+                                            <Button Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                                    Margin="0,4" Command="{Binding MoveAllColumnsToAvailableCommand}">
+                                                <materialDesign:PackIcon Kind="ArrowLeftBold" />
+                                            </Button>
+                                        </StackPanel>
+
+                                        <!-- 已选择列列表 -->
+                                        <materialDesign:Card Grid.Column="2" UniformCornerRadius="4">
+                                            <DockPanel>
+                                                <materialDesign:ColorZone Mode="SecondaryLight" DockPanel.Dock="Top"
+                                                                          CornerRadius="4,4,0,0" Cursor="">
+                                                    <StackPanel Orientation="Horizontal" Margin="8">
+                                                        <materialDesign:PackIcon Kind="PlaylistCheck"
+                                                            VerticalAlignment="Center" />
+                                                        <TextBlock Text="已选择列" Margin="8,0,0,0" FontWeight="Medium" />
+                                                    </StackPanel>
+                                                </materialDesign:ColorZone>
+                                                <ListBox ItemsSource="{Binding SelectedColumns}"
+                                                         Height="200"
+                                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <materialDesign:Card Margin="2" UniformCornerRadius="4">
+                                                                <DockPanel Width="180">
+                                                                    <Button DockPanel.Dock="Left"
+                                                                            Style="{StaticResource MaterialDesignIconButton}"
+                                                                            Command="{Binding DataContext.MoveColumnToAvailableCommand,
+                                                                                RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <materialDesign:PackIcon Kind="ArrowLeft" />
+                                                                    </Button>
+                                                                    <TextBlock Text="{Binding}"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="8,0"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               ToolTip="{Binding}" />
+                                                                </DockPanel>
+                                                            </materialDesign:Card>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                    <ListBox.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ListBox.ItemsPanel>
+                                                </ListBox>
+                                            </DockPanel>
+                                        </materialDesign:Card>
+                                    </Grid>
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- 身份证信息提取区域 -->
+                            <materialDesign:Card Margin="0,0,0,16" UniformCornerRadius="4">
+                                <StackPanel Margin="16">
+                                    <DockPanel>
+                                        <materialDesign:PackIcon Kind="IdCard" VerticalAlignment="Center"
+                                                                 Width="24" Height="24" Margin="0,0,16,0" />
+                                        <TextBlock Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                                   Margin="0,0,0,8" FontWeight="Medium">
+                                            身份证信息提取
+                                        </TextBlock>
+                                    </DockPanel>
+
+                                    <materialDesign:Card UniformCornerRadius="4" Margin="0,8,0,0">
+                                        <StackPanel Margin="16,8">
+                                            <!-- 启用身份证提取的开关 -->
+                                            <DockPanel Margin="0,0,0,16">
+                                                <TextBlock Text="启用身份证信息提取"
+                                                           Style="{StaticResource MaterialDesignBody1TextBlock}"
+                                                           VerticalAlignment="Center" />
+                                                <materialDesign:PackIcon Kind="Information"
+                                                                         Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                                                         Margin="8,0,0,0" VerticalAlignment="Center"
+                                                                         ToolTip="将自动提取身份证信息，包括性别、出生日期、籍贯等" />
+                                                <ToggleButton IsChecked="{Binding EnableIdCardExtraction}"
+                                                              HorizontalAlignment="Right" />
+                                            </DockPanel>
+
+                                            <!-- 身份证列选择 -->
+                                            <DockPanel
+                                                Visibility="{Binding EnableIdCardExtraction, 
+                                                               Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Text="选择身份证列："
+                                                           Style="{StaticResource MaterialDesignBody2TextBlock}"
+                                                           VerticalAlignment="Center" Margin="0,0,16,0" />
+                                                <ComboBox ItemsSource="{Binding AvailableIdCardColumns}"
+                                                          SelectedItem="{Binding SelectedIdCardColumn}"
+                                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                          materialDesign:HintAssist.Hint="选择含身份证号的列"
+                                                          HorizontalAlignment="Stretch" />
+                                            </DockPanel>
+
+                                            <!-- 提取信息说明 -->
+                                            <Border BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                                    BorderThickness="0,1,0,0" Margin="0,16,0,0" Padding="0,16,0,0"
+                                                    Visibility="{Binding EnableIdCardExtraction, 
+                                                          Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <!-- 最终解决方案 -->
+                                                <Border BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                                        BorderThickness="0,1,0,0" Margin="0,16,0,0" Padding="0,16,0,0"
+                                                        Visibility="{Binding EnableIdCardExtraction, 
+               Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <StackPanel>
+                                                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                                            <TextBlock Text="可在Word模板中使用以下占位符"
+                                                                       Style="{StaticResource MaterialDesignBody2TextBlock}"
+                                                                       FontWeight="Medium" DockPanel.Dock="Left" />
+
+                                                            <materialDesign:PackIcon Kind="ContentCopy"
+                                                                DockPanel.Dock="Right"
+                                                                Margin="8,0,4,0" VerticalAlignment="Center" />
+                                                            <TextBlock Text="点击可复制" DockPanel.Dock="Right"
+                                                                       Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                                                       VerticalAlignment="Center" />
+                                                        </DockPanel>
+
+                                                        <ItemsControl ItemsSource="{Binding IdCardPlaceholders}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <materialDesign:Chip Content="{Binding}" Margin="4"
+                                                                        Cursor="Hand"
+                                                                        ToolTip="点击复制到剪贴板"
+                                                                        Command="{Binding DataContext.CopyToClipboardCommand, 
+                                              RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                        CommandParameter="{Binding}">
+                                                                        <materialDesign:Chip.Icon>
+                                                                            <materialDesign:PackIcon Kind="ContentCopy"
+                                                                                Width="16" Height="16" />
+                                                                        </materialDesign:Chip.Icon>
+                                                                    </materialDesign:Chip>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Border>
+                                        </StackPanel>
+                                    </materialDesign:Card>
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- 结果区域 -->
+                            <materialDesign:Card Margin="0,0,0,16" UniformCornerRadius="4"
+                                                 Visibility="{Binding ProcessResultText, Converter={StaticResource StringToVisibilityConverter}}">
+                                <StackPanel Margin="16,8">
+                                    <DockPanel>
+                                        <materialDesign:PackIcon DockPanel.Dock="Left"
+                                                                 Kind="{Binding ProcessSuccess, Converter={StaticResource BoolToIconConverter}, ConverterParameter=CheckCircleOutline;AlertCircleOutline}"
+                                                                 Foreground="{Binding ProcessSuccess, Converter={StaticResource BoolToColorConverter}, ConverterParameter='#4CAF50;#F44336'}"
+                                                                 Width="24" Height="24" VerticalAlignment="Center" />
+                                        <TextBlock Margin="8,0,0,0" Text="{Binding ProcessResultText}"
+                                                   Foreground="{Binding ProcessSuccess, Converter={StaticResource BoolToColorConverter}, ConverterParameter='#4CAF50;#F44336'}"
+                                                   VerticalAlignment="Center" FontWeight="Medium" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- 进度条 -->
+                            <materialDesign:Card UniformCornerRadius="4" Margin="0,0,0,16"
+                                                 Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Margin="16,8">
+                                    <TextBlock Text="正在处理..." Style="{StaticResource MaterialDesignBody1TextBlock}"
+                                               Margin="0,0,0,8" />
+                                    <ProgressBar Value="{Binding ProgressValue}" Height="8"
+                                                 Style="{StaticResource MaterialDesignLinearProgressBar}" />
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- 生成按钮 -->
+                            <Button Style="{StaticResource MaterialDesignRaisedSecondaryButton}"
+                                    Command="{Binding GenerateDocumentsCommand}"
+                                    IsEnabled="{Binding IsProcessing, Converter={StaticResource InverseBoolConverter}}"
+                                    HorizontalAlignment="Right"
+                                    materialDesign:ButtonAssist.CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="FileDocumentCheck" Width="24" Height="24" />
+                                    <TextBlock Text="生成文档" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </materialDesign:Card>
+
+            <!-- 忙碌指示器 -->
+            <materialDesign:Card Grid.Row="1" UniformCornerRadius="8" Width="300" VerticalAlignment="Center"
+                                 HorizontalAlignment="Center"
+                                 Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                 materialDesign:ElevationAssist.Elevation="Dp8">
+                <StackPanel Margin="16">
+                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                 Value="0"
+                                 IsIndeterminate="True" />
+                    <TextBlock Text="正在处理，请稍后..."
+                               Style="{StaticResource MaterialDesignBody1TextBlock}"
+                               HorizontalAlignment="Center" Margin="0,16,0,0" />
+                </StackPanel>
+            </materialDesign:Card>
+        </Grid>
+    </materialDesign:DialogHost>
+</Window>

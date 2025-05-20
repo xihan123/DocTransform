@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net9.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWPF>true</UseWPF>
+        <!--启用单文件发布-->
+        <PublishSingleFile>true</PublishSingleFile>
+        <!--捆绑运行时-->
+        <SelfContained>false</SelfContained>
+
+        <UseWindowsForms>true</UseWindowsForms>
+
+        <ApplicationIcon>zrtx1-a67hz-001.ico</ApplicationIcon>
+        <Authors>xihan123</Authors>
+        <PackageProjectUrl>https://github.com/xihan123/DocTransform</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/xihan123/DocTransform</RepositoryUrl>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <NeutralLanguage>zh</NeutralLanguage>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="zrtx1-a67hz-001.ico"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ClosedXML" Version="0.105.0"/>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0"/>
+        <PackageReference Include="MaterialDesignThemes" Version="5.2.1"/>
+        <PackageReference Include="ShowMeTheXAML.MSBuild" Version="2.0.0"/>
+        <ExcludeFromSingleFile Include="*.pdb"/>
+        <ExcludeFromSingleFile Include="*.xml"/>
+    </ItemGroup>
+
+</Project>
