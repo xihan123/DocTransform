@@ -1,4 +1,4 @@
-﻿name: .NET Publish and Release
+name: .NET Publish and Release
 
 on:
   push:
