@@ -417,71 +417,76 @@
                                     <!-- Excel模板选择区域 -->
                                     <Grid Margin="0,0,0,16">
                                         <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Excel模板标题和启用开关 -->
                                         <DockPanel Grid.Row="0" Grid.Column="0" LastChildFill="True">
                                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                                 <TextBlock Text="启用Excel模板" VerticalAlignment="Center" Margin="0,0,8,0"
-                     ToolTip="启用后将同时生成Excel文件"/>
-                                                <ToggleButton IsChecked="{Binding UseExcelTemplate}"/>
+                                                           ToolTip="启用后将同时生成Excel文件" />
+                                                <ToggleButton IsChecked="{Binding UseExcelTemplate}" />
                                             </StackPanel>
-                                            <TextBlock Style="{StaticResource MaterialDesignSubtitle1TextBlock}" 
-               Text="Excel模板"
-               VerticalAlignment="Center"/>
+                                            <TextBlock Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                                                       Text="Excel模板"
+                                                       VerticalAlignment="Center" />
                                         </DockPanel>
 
                                         <!-- 浏览和检查按钮 -->
                                         <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
                                             <Button Margin="8,0,0,0"
-            Style="{StaticResource MaterialDesignRaisedLightButton}"
-            ToolTip="浏览Excel模板"
-            Command="{Binding BrowseExcelTemplateCommand}">
+                                                    Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                                    ToolTip="浏览Excel模板"
+                                                    Command="{Binding BrowseExcelTemplateCommand}">
                                                 <StackPanel Orientation="Horizontal">
                                                     <materialDesign:PackIcon Kind="FileExcel" />
-                                                    <TextBlock Margin="8,0,0,0" Text="浏览"/>
+                                                    <TextBlock Margin="8,0,0,0" Text="浏览" />
                                                 </StackPanel>
                                             </Button>
                                             <Button Margin="8,0,0,0"
-            Style="{StaticResource MaterialDesignOutlinedButton}"
-            Command="{Binding CheckExcelPlaceholdersCommand}"
-            ToolTip="检查Excel模板中的占位符"
-            IsEnabled="{Binding ExcelTemplatePath, Converter={StaticResource StringNotEmptyToBoolConverter}}">
-                                                <materialDesign:PackIcon Kind="Magnify"/>
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    Command="{Binding CheckExcelPlaceholdersCommand}"
+                                                    ToolTip="检查Excel模板中的占位符"
+                                                    IsEnabled="{Binding ExcelTemplatePath, Converter={StaticResource StringNotEmptyToBoolConverter}}">
+                                                <materialDesign:PackIcon Kind="Magnify" />
                                             </Button>
                                             <Button Margin="8,0,0,0"
-            Style="{StaticResource MaterialDesignOutlinedButton}"
-            Command="{Binding ClearExcelTemplateCommand}"
-            ToolTip="清除Excel模板"
-            IsEnabled="{Binding ExcelTemplatePath, Converter={StaticResource StringNotEmptyToBoolConverter}}">
-                                                <materialDesign:PackIcon Kind="Close"/>
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    Command="{Binding ClearExcelTemplateCommand}"
+                                                    ToolTip="清除Excel模板"
+                                                    IsEnabled="{Binding ExcelTemplatePath, Converter={StaticResource StringNotEmptyToBoolConverter}}">
+                                                <materialDesign:PackIcon Kind="Close" />
                                             </Button>
                                         </StackPanel>
 
                                         <!-- Excel模板路径显示 -->
-                                        <materialDesign:Card Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0"
-                     IsEnabled="{Binding UseExcelTemplate}">
+                                        <materialDesign:Card Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                                             Margin="0,8,0,0"
+                                                             IsEnabled="{Binding UseExcelTemplate}">
                                             <DockPanel Margin="8">
-                                                <materialDesign:PackIcon Kind="FileExcel" DockPanel.Dock="Left" 
-                                 VerticalAlignment="Center" Foreground="#1F7244"/>
-                                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" 
-                   Text="{Binding ExcelTemplatePath, Converter={StaticResource FilenameOnlyConverter}}" 
-                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                   ToolTip="{Binding ExcelTemplatePath}">
+                                                <materialDesign:PackIcon Kind="FileExcel" DockPanel.Dock="Left"
+                                                                         VerticalAlignment="Center"
+                                                                         Foreground="#1F7244" />
+                                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
+                                                           Text="{Binding ExcelTemplatePath, Converter={StaticResource FilenameOnlyConverter}}"
+                                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding ExcelTemplatePath}">
                                                     <TextBlock.Style>
-                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignTextBlock}">
-                                                            <Setter Property="Text" Value="未选择Excel模板"/>
+                                                        <Style TargetType="TextBlock"
+                                                               BasedOn="{StaticResource MaterialDesignTextBlock}">
+                                                            <Setter Property="Text" Value="未选择Excel模板" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ExcelTemplatePath}" Value="">
-                                                                    <Setter Property="Text" Value="未选择Excel模板"/>
-                                                                    <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBodyLight}"/>
-                                                                    <Setter Property="FontStyle" Value="Italic"/>
+                                                                <DataTrigger Binding="{Binding ExcelTemplatePath}"
+                                                                             Value="">
+                                                                    <Setter Property="Text" Value="未选择Excel模板" />
+                                                                    <Setter Property="Foreground"
+                                                                            Value="{DynamicResource MaterialDesignBodyLight}" />
+                                                                    <Setter Property="FontStyle" Value="Italic" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -492,28 +497,33 @@
                                     </Grid>
 
                                     <!-- Excel占位符显示区域 -->
-                                    <materialDesign:Card Margin="0,0,0,16" 
-                 UniformCornerRadius="4"
-                 Visibility="{Binding DetectedExcelPlaceholders.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                                    <materialDesign:Card Margin="0,0,0,16"
+                                                         UniformCornerRadius="4"
+                                                         Visibility="{Binding DetectedExcelPlaceholders.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
                                         <Grid>
                                             <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
 
                                             <!-- 标题 -->
-                                            <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryLight" CornerRadius="4,4,0,0">
+                                            <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryLight"
+                                                                      CornerRadius="4,4,0,0">
                                                 <DockPanel Margin="8">
-                                                    <materialDesign:PackIcon Kind="Bracket" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Excel模板中的占位符" Margin="8,0,0,0" FontWeight="Medium"/>
-                                                    <TextBlock Text="{Binding DetectedExcelPlaceholders.Count, StringFormat='(共{0}个)'}" 
-                       Margin="8,0,0,0" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                                    <materialDesign:PackIcon Kind="Bracket" VerticalAlignment="Center" />
+                                                    <TextBlock Text="Excel模板中的占位符" Margin="8,0,0,0" FontWeight="Medium" />
+                                                    <TextBlock
+                                                        Text="{Binding DetectedExcelPlaceholders.Count, StringFormat='(共{0}个)'}"
+                                                        Margin="8,0,0,0"
+                                                        Foreground="{DynamicResource MaterialDesignBodyLight}" />
                                                 </DockPanel>
                                             </materialDesign:ColorZone>
 
                                             <!-- 占位符列表 -->
-                                            <ItemsControl Grid.Row="1" ItemsSource="{Binding DetectedExcelPlaceholders}" 
-                  Margin="8" MaxHeight="120" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl Grid.Row="1"
+                                                          ItemsSource="{Binding DetectedExcelPlaceholders}"
+                                                          Margin="8" MaxHeight="120"
+                                                          ScrollViewer.VerticalScrollBarVisibility="Auto">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <WrapPanel />
@@ -521,19 +531,19 @@
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Button Style="{StaticResource MaterialDesignOutlinedButton}" 
-                          Margin="4"
-                          Content="{Binding}"
-                          Command="{Binding DataContext.CopyToClipboardCommand, 
+                                                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                                Margin="4"
+                                                                Content="{Binding}"
+                                                                Command="{Binding DataContext.CopyToClipboardCommand, 
                                   RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                          CommandParameter="{Binding}"/>
+                                                                CommandParameter="{Binding}" />
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                                 <ItemsControl.Template>
                                                     <ControlTemplate TargetType="ItemsControl">
-                                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled" 
-                               VerticalScrollBarVisibility="Auto">
-                                                            <ItemsPresenter/>
+                                                        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                                                      VerticalScrollBarVisibility="Auto">
+                                                            <ItemsPresenter />
                                                         </ScrollViewer>
                                                     </ControlTemplate>
                                                 </ItemsControl.Template>
@@ -785,6 +795,208 @@
                                             </Border>
                                         </StackPanel>
                                     </materialDesign:Card>
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- 图片目录设置区域 -->
+                            <materialDesign:Card Margin="0,0,0,16">
+                                <StackPanel>
+                                    <!-- 标题和开关 -->
+                                    <DockPanel Margin="16,8">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <TextBlock Text="启用图片替换" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                       ToolTip="启用后将根据图片目录中的文件替换Excel中的占位符" />
+                                            <ToggleButton IsChecked="{Binding UseImageReplacement}" />
+                                        </StackPanel>
+                                        <TextBlock Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                                                   Text="图片目录"
+                                                   VerticalAlignment="Center" />
+                                    </DockPanel>
+
+                                    <!-- 功能介绍 -->
+                                    <materialDesign:Card Margin="16,4" UniformCornerRadius="4"
+                                                         Background="{DynamicResource MaterialDesignBackground}">
+                                        <TextBlock Margin="8" TextWrapping="Wrap">
+                                            配置图片目录后，Excel中的 {目录名} 占位符将被替换为匹配的图片文件。图片将自动缩放以适应单元格大小。
+                                        </TextBlock>
+                                    </materialDesign:Card>
+
+                                    <!-- 控制按钮 -->
+                                    <DockPanel Margin="16,8" IsEnabled="{Binding UseImageReplacement}">
+                                        <!-- 匹配列选择 -->
+                                        <ComboBox DockPanel.Dock="Left" Width="200"
+                                                  ItemsSource="{Binding AvailableColumns}"
+                                                  SelectedItem="{Binding SelectedImageMatchingColumn}"
+                                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                  materialDesign:HintAssist.Hint="默认匹配列"
+                                                  DisplayMemberPath="."
+                                                  VerticalAlignment="Center" />
+
+                                        <!-- 按钮 -->
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                                    HorizontalAlignment="Right">
+                                            <Button Style="{StaticResource MaterialDesignRaisedLightButton}"
+                                                    Command="{Binding AddImageDirectoryCommand}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="FolderImage" />
+                                                    <TextBlock Margin="8,0,0,0" Text="添加图片目录" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Margin="8,0,0,0"
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    Command="{Binding ClearAllImageDirectoriesCommand}"
+                                                    IsEnabled="{Binding ImageDirectories.Count, Converter={StaticResource GreaterThanZeroConverter}}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="DeleteSweep" />
+                                                    <TextBlock Margin="8,0,0,0" Text="清除全部" />
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </DockPanel>
+
+                                    <!-- 图片目录列表 -->
+                                    <ItemsControl ItemsSource="{Binding ImageDirectories}"
+                                                  Margin="16,8,16,16"
+                                                  IsEnabled="{Binding UseImageReplacement}"
+                                                  MaxHeight="300">
+                                        <ItemsControl.Template>
+                                            <ControlTemplate TargetType="ItemsControl">
+                                                <Border BorderThickness="1"
+                                                        BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                                        CornerRadius="4"
+                                                        Visibility="{Binding ImageDirectories.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                                                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4">
+                                                        <ItemsPresenter />
+                                                    </ScrollViewer>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </ItemsControl.Template>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <materialDesign:Card Margin="4" UniformCornerRadius="4">
+                                                    <Grid Margin="8">
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <!-- 目录信息 -->
+                                                        <StackPanel Grid.Row="0" Grid.Column="0">
+                                                            <DockPanel>
+                                                                <TextBlock DockPanel.Dock="Left"
+                                                                           Text="{Binding DirectoryName}"
+                                                                           FontWeight="Medium" />
+                                                                <TextBlock DockPanel.Dock="Right"
+                                                                           Text="{Binding PlaceholderName}"
+                                                                           FontStyle="Italic" Margin="8,0,0,0"
+                                                                           Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                                            </DockPanel>
+                                                            <TextBlock Text="{Binding DirectoryPath}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       ToolTip="{Binding DirectoryPath}" />
+                                                        </StackPanel>
+
+                                                        <!-- 操作按钮 -->
+                                                        <StackPanel Grid.Row="0" Grid.Column="1"
+                                                                    Orientation="Horizontal">
+                                                            <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                                    Command="{Binding DataContext.CheckDirectoryImagesCommand, 
+                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip="刷新图片列表">
+                                                                <materialDesign:PackIcon Kind="Refresh" />
+                                                            </Button>
+                                                            <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                                    Command="{Binding DataContext.RemoveImageDirectoryCommand, 
+                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip="移除此目录">
+                                                                <materialDesign:PackIcon Kind="DeleteOutline" />
+                                                            </Button>
+                                                        </StackPanel>
+
+                                                        <!-- 设置区域 -->
+                                                        <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                                              Margin="0,8,0,0">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                            </Grid.RowDefinitions>
+
+                                                            <!-- 匹配列设置 -->
+                                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="匹配列："
+                                                                       Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                            <ComboBox Grid.Row="0" Grid.Column="1"
+                                                                      ItemsSource="{Binding DataContext.AvailableColumns, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                      SelectedItem="{Binding MatchingColumn, Mode=TwoWay}"
+                                                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                                      materialDesign:HintAssist.Hint="选择列以匹配图片文件名"
+                                                                      DisplayMemberPath="."
+                                                                      VerticalAlignment="Center" />
+
+                                                            <!-- 图片信息 -->
+                                                            <StackPanel Grid.Row="1" Grid.Column="0"
+                                                                        Grid.ColumnSpan="2"
+                                                                        Orientation="Horizontal" Margin="0,8,0,0">
+                                                                <materialDesign:PackIcon Kind="Image"
+                                                                    VerticalAlignment="Center" />
+                                                                <TextBlock Margin="8,0,0,0"
+                                                                           Text="{Binding ImageCount, StringFormat='找到 {0} 个图片文件'}"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{DynamicResource MaterialDesignBodyLight}" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Grid>
+                                                </materialDesign:Card>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- 图片设置区域 -->
+                                    <Expander Header="图片嵌入设置"
+                                              Margin="16,0,16,8"
+                                              IsExpanded="False"
+                                              IsEnabled="{Binding UseImageReplacement}">
+                                        <Grid Margin="0,8,0,0">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- 填充模式选择 - 使用常规ComboBox绑定 -->
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="填充模式："
+                                                       VerticalAlignment="Center" Margin="0,0,8,0" />
+                                            <ComboBox Grid.Row="0" Grid.Column="1"
+                                                      ItemsSource="{Binding ImageFillModeItems}"
+                                                      SelectedItem="{Binding SelectedImageFillModeItem}"
+                                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                      DisplayMemberPath="DisplayName" />
+
+                                            <!-- 填充比例滑块 -->
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="填充比例："
+                                                       VerticalAlignment="Center" Margin="0,16,8,0" />
+                                            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal"
+                                                        Margin="0,16,0,0">
+                                                <Slider Minimum="10" Maximum="100"
+                                                        Value="{Binding ImageFillPercentage}"
+                                                        Width="200" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding ImageFillPercentage, StringFormat='{}{0}%'}"
+                                                           Margin="16,0,0,0" VerticalAlignment="Center" Width="40" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Expander>
                                 </StackPanel>
                             </materialDesign:Card>
 

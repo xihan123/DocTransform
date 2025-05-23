@@ -150,16 +150,13 @@ public class GreaterThanConverter : IMultiValueConverter
 }
 
 /// <summary>
-/// 将非空字符串转换为true，空字符串转换为false
+///     将非空字符串转换为true，空字符串转换为false
 /// </summary>
 public class StringNotEmptyToBoolConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is string strValue)
-        {
-            return !string.IsNullOrEmpty(strValue);
-        }
+        if (value is string strValue) return !string.IsNullOrEmpty(strValue);
 
         return false;
     }
@@ -171,18 +168,33 @@ public class StringNotEmptyToBoolConverter : IValueConverter
 }
 
 /// <summary>
-/// 将非零值转换为Visible，零值转换为Collapsed
+///     将非零值转换为Visible，零值转换为Collapsed
 /// </summary>
 public class NotZeroToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is int intValue)
-        {
-            return intValue > 0 ? Visibility.Visible : Visibility.Collapsed;
-        }
+        if (value is int intValue) return intValue > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+///     将大于零的数值转换为true，否则为false
+/// </summary>
+public class GreaterThanZeroConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int intValue) return intValue > 0;
+
+        return false;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

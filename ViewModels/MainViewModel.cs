@@ -20,7 +20,11 @@ namespace DocTransform.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly ExcelService _excelService;
+
+    // Excel模板相关属性
+    private readonly ExcelTemplateService _excelTemplateService;
     private readonly IdCardService _idCardService;
+    private readonly ImageProcessingService _imageProcessingService;
     private readonly WordService _wordService;
 
     [ObservableProperty] private ObservableCollection<string> _availableColumns = new();
@@ -31,6 +35,8 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private ExcelData _currentExcelData;
 
+    [ObservableProperty] private ObservableCollection<string> _detectedExcelPlaceholders = new();
+
     // 身份证信息提取相关属性
     [ObservableProperty] private bool _enableIdCardExtraction;
 
@@ -38,8 +44,30 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private string _excelFilePath = string.Empty;
 
+    [ObservableProperty] private string _excelTemplatePath = string.Empty;
+
     // 身份证占位符集合
     [ObservableProperty] private List<string> _idCardPlaceholders = PlaceholderConstants.AllPlaceholders;
+
+    /// <summary>
+    ///     图片目录列表
+    /// </summary>
+    [ObservableProperty] private ObservableCollection<ImageSourceDirectory> _imageDirectories = new();
+
+    /// <summary>
+    ///     图片填充模式
+    /// </summary>
+    [ObservableProperty] private ImageFillMode _imageFillMode = ImageFillMode.Fit;
+
+    /// <summary>
+    ///     可选填充模式列表
+    /// </summary>
+    [ObservableProperty] private List<ImageFillModeItem> _imageFillModeItems = ImageFillModeItem.GetAll();
+
+    /// <summary>
+    ///     图片填满单元格的程度（百分比）
+    /// </summary>
+    [ObservableProperty] private int _imageFillPercentage = 90;
 
     [ObservableProperty] private bool _isMultiTableMode;
 
@@ -64,35 +92,43 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private string _selectedIdCardColumn = string.Empty;
 
+    /// <summary>
+    ///     当前选择的填充模式项
+    /// </summary>
+    [ObservableProperty] private ImageFillModeItem _selectedImageFillModeItem;
+
+    /// <summary>
+    ///     当前选中的用于匹配图片的列名
+    /// </summary>
+    [ObservableProperty] private string _selectedImageMatchingColumn = string.Empty;
+
     [ObservableProperty] private string _selectedKeyColumn = string.Empty;
 
     [ObservableProperty] private string _statusMessage = "准备就绪";
 
     [ObservableProperty] private int _totalItems;
 
+    [ObservableProperty] private bool _useExcelTemplate;
+
+    /// <summary>
+    ///     是否启用图片替换功能
+    /// </summary>
+    [ObservableProperty] private bool _useImageReplacement;
+
     [ObservableProperty] private string _wordTemplatePath = string.Empty;
-
-    // Excel模板相关属性
-    private readonly ExcelTemplateService _excelTemplateService;
-
-    [ObservableProperty]
-    private string _excelTemplatePath = string.Empty;
-
-    [ObservableProperty]
-    private bool _useExcelTemplate = false;
-
-    [ObservableProperty]
-    private ObservableCollection<string> _detectedExcelPlaceholders = new();
 
     public MainViewModel()
     {
         _excelService = new ExcelService();
         _wordService = new WordService();
         _idCardService = new IdCardService();
-        _excelTemplateService = new ExcelTemplateService();
+        _imageProcessingService = new ImageProcessingService();
+        _excelTemplateService = new ExcelTemplateService(_imageProcessingService);
 
         // 设置默认输出目录为"我的文档"
         OutputDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        // 初始化选中的填充模式
+        SelectedImageFillModeItem = ImageFillModeItems.First(item => item.Value == ImageFillMode.Fit);
     }
 
     [RelayCommand]
@@ -485,9 +521,13 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    ///     生成文档
+    /// </summary>
     [RelayCommand]
     private async Task GenerateDocuments()
     {
+        // 验证基本条件...
         if (string.IsNullOrEmpty(OutputDirectory) || !Directory.Exists(OutputDirectory))
         {
             StatusMessage = "请选择有效的输出目录";
@@ -496,9 +536,11 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrEmpty(OutputFileNameTemplate)) OutputFileNameTemplate = "{序号}_{时间}";
 
-        // 验证Word模板或Excel模板至少选择一个
-        bool hasWordTemplate = !string.IsNullOrEmpty(WordTemplatePath) && File.Exists(WordTemplatePath);
-        bool hasExcelTemplate = UseExcelTemplate && !string.IsNullOrEmpty(ExcelTemplatePath) && File.Exists(ExcelTemplatePath);
+        // 验证模板和功能选择
+        var hasWordTemplate = !string.IsNullOrEmpty(WordTemplatePath) && File.Exists(WordTemplatePath);
+        var hasExcelTemplate = UseExcelTemplate && !string.IsNullOrEmpty(ExcelTemplatePath) &&
+                               File.Exists(ExcelTemplatePath);
+        var hasImageDirectories = UseImageReplacement && ImageDirectories.Count > 0;
 
         if (!hasWordTemplate && !hasExcelTemplate)
         {
@@ -506,7 +548,13 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // 验证数据源
+        if (hasImageDirectories && !hasExcelTemplate)
+        {
+            StatusMessage = "图片替换功能需要启用Excel模板";
+            return;
+        }
+
+        // 验证数据源...
         List<Dictionary<string, string>> dataRows;
 
         if (IsMultiTableMode)
@@ -543,7 +591,22 @@ public partial class MainViewModel : ObservableObject
             dataRows = _excelData.Rows;
         }
 
-        // 校验身份证提取设置
+        // 检查图片目录的匹配列设置
+        if (hasImageDirectories)
+        {
+            var directoriesWithoutColumn = ImageDirectories
+                .Where(d => string.IsNullOrEmpty(d.MatchingColumn))
+                .ToList();
+
+            if (directoriesWithoutColumn.Any())
+            {
+                StatusMessage =
+                    $"图片目录 {string.Join(", ", directoriesWithoutColumn.Select(d => d.DirectoryName))} 未设置匹配列";
+                return;
+            }
+        }
+
+        // 其他校验...
         if (EnableIdCardExtraction && string.IsNullOrEmpty(SelectedIdCardColumn))
         {
             StatusMessage = "已启用身份证信息提取，但未选择身份证列";
@@ -558,14 +621,15 @@ public partial class MainViewModel : ObservableObject
             ProcessedItems = 0;
             ProcessResultText = string.Empty;
 
-            int successCount = 0;
-            int failCount = 0;
+            var successCount = 0;
+            var failCount = 0;
 
-            // 统计需要生成的文档总数
-            int totalDocuments = dataRows.Count * (hasWordTemplate && hasExcelTemplate ? 2 : 1);
-            int processedDocuments = 0;
+            // 计算总处理任务数
+            var totalTasks = dataRows.Count * (hasWordTemplate ? 1 : 0) +
+                             dataRows.Count * (hasExcelTemplate ? 1 : 0);
+            var completedTasks = 0;
 
-            for (int i = 0; i < dataRows.Count; i++)
+            for (var i = 0; i < dataRows.Count; i++)
             {
                 var rowData = new Dictionary<string, string>(dataRows[i]);
 
@@ -576,15 +640,14 @@ public partial class MainViewModel : ObservableObject
 
                 // 处理身份证信息提取
                 if (EnableIdCardExtraction && !string.IsNullOrEmpty(SelectedIdCardColumn) &&
-                    rowData.TryGetValue(SelectedIdCardColumn, out string? idCard) &&
+                    rowData.TryGetValue(SelectedIdCardColumn, out var idCard) &&
                     !string.IsNullOrEmpty(idCard))
-                {
                     try
                     {
-                        // 身份证信息提取逻辑...
-                        string gender = _idCardService.ExtractGender(idCard);
-                        string birthDate = _idCardService.ExtractBirthDate(idCard);
-                        string region = _idCardService.ExtractRegion(idCard);
+                        // 提取身份证信息...
+                        var gender = _idCardService.ExtractGender(idCard);
+                        var birthDate = _idCardService.ExtractBirthDate(idCard);
+                        var region = _idCardService.ExtractRegion(idCard);
 
                         rowData["身份证性别"] = gender;
                         rowData["身份证出生日期"] = birthDate;
@@ -597,8 +660,8 @@ public partial class MainViewModel : ObservableObject
                     }
                     catch (Exception ex)
                     {
-                        // 异常处理...
-                        System.Diagnostics.Debug.WriteLine($"身份证信息提取出错: {ex.Message}");
+                        // 处理异常...
+                        Debug.WriteLine($"身份证信息提取出错: {ex.Message}");
 
                         rowData["身份证性别"] = "未知";
                         rowData["身份证出生日期"] = "未知";
@@ -608,38 +671,35 @@ public partial class MainViewModel : ObservableObject
                         rowData["身份证出生日"] = "未知";
                         rowData["身份证年龄"] = "未知";
                     }
-                }
 
                 // 生成文件名
-                string fileName = OutputFileNameTemplate;
+                var fileName = OutputFileNameTemplate;
                 foreach (var item in rowData)
-                {
-                    fileName = fileName.Replace($"{{{item.Key}}}", item.Value ?? string.Empty, StringComparison.OrdinalIgnoreCase);
-                }
+                    fileName = fileName.Replace($"{{{item.Key}}}", item.Value ?? string.Empty,
+                        StringComparison.OrdinalIgnoreCase);
 
                 // 处理无效字符
                 foreach (var invalidChar in Path.GetInvalidFileNameChars())
-                {
                     fileName = fileName.Replace(invalidChar, '_');
-                }
 
                 // 确保文件名有效
                 if (string.IsNullOrWhiteSpace(fileName) || fileName.All(c => c == '_'))
-                {
                     fileName = $"Document_{i + 1}_{DateTime.Now:yyyyMMdd-HHmmss}";
-                }
 
                 // 处理Word模板
                 if (hasWordTemplate)
                 {
-                    string wordOutputPath = Path.Combine(OutputDirectory, $"{fileName}.docx");
+                    var wordOutputPath = Path.Combine(OutputDirectory, $"{fileName}.docx");
 
                     // 异步处理Word文档
-                    var wordProgress = new Progress<int>(value => {
-                        ProgressValue = ((processedDocuments * 100) + value) / totalDocuments;
+                    var wordProgress = new Progress<int>(value =>
+                    {
+                        ProgressValue = (completedTasks * 100 + value) / totalTasks;
                     });
 
-                    var wordResult = await _wordService.ProcessTemplateAsync(WordTemplatePath, wordOutputPath, rowData, wordProgress);
+                    var wordResult =
+                        await _wordService.ProcessTemplateAsync(WordTemplatePath, wordOutputPath, rowData,
+                            wordProgress);
 
                     if (wordResult.Success)
                     {
@@ -651,20 +711,39 @@ public partial class MainViewModel : ObservableObject
                         StatusMessage = $"处理第 {i + 1} 行Word文档时出错: {wordResult.Message}";
                     }
 
-                    processedDocuments++;
+                    completedTasks++;
                 }
 
                 // 处理Excel模板
                 if (hasExcelTemplate)
                 {
-                    string excelOutputPath = Path.Combine(OutputDirectory, $"{fileName}.xlsx");
+                    var excelOutputPath = Path.Combine(OutputDirectory, $"{fileName}.xlsx");
 
                     // 异步处理Excel文档
-                    var excelProgress = new Progress<int>(value => {
-                        ProgressValue = ((processedDocuments * 100) + value) / totalDocuments;
+                    var excelProgress = new Progress<int>(value =>
+                    {
+                        ProgressValue = (completedTasks * 100 + value) / totalTasks;
                     });
 
-                    var excelResult = await _excelTemplateService.ProcessTemplateAsync(ExcelTemplatePath, excelOutputPath, rowData, excelProgress);
+                    (bool Success, string Message) excelResult;
+
+                    if (hasImageDirectories)
+                        // 使用带图片处理的方法
+                        excelResult = await _excelTemplateService.ProcessTemplateWithImagesAsync(
+                            ExcelTemplatePath,
+                            excelOutputPath,
+                            rowData,
+                            ImageDirectories,
+                            ImageFillMode, // 直接使用枚举值
+                            ImageFillPercentage,
+                            excelProgress);
+                    else
+                        // 使用普通的模板处理方法
+                        excelResult = await _excelTemplateService.ProcessTemplateAsync(
+                            ExcelTemplatePath,
+                            excelOutputPath,
+                            rowData,
+                            excelProgress);
 
                     if (excelResult.Success)
                     {
@@ -676,9 +755,8 @@ public partial class MainViewModel : ObservableObject
                         StatusMessage = $"处理第 {i + 1} 行Excel文档时出错: {excelResult.Message}";
                     }
 
-                    processedDocuments++;
+                    completedTasks++;
                 }
-
 
                 ProcessedItems = i + 1;
             }
@@ -876,12 +954,12 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 浏览Excel模板文件
+    ///     浏览Excel模板文件
     /// </summary>
     [RelayCommand]
     private async Task BrowseExcelTemplate()
     {
-        var dialog = new Microsoft.Win32.OpenFileDialog
+        var dialog = new OpenFileDialog
         {
             Filter = "Excel模板 (*.xlsx)|*.xlsx",
             Title = "选择Excel模板"
@@ -892,7 +970,7 @@ public partial class MainViewModel : ObservableObject
             ExcelTemplatePath = dialog.FileName;
 
             // 验证Excel模板有效性
-            bool isValid = await _excelTemplateService.IsValidTemplateAsync(ExcelTemplatePath);
+            var isValid = await _excelTemplateService.IsValidTemplateAsync(ExcelTemplatePath);
             if (!isValid)
             {
                 StatusMessage = "选择的Excel模板无效";
@@ -907,7 +985,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 检查Excel模板中的占位符
+    ///     检查Excel模板中的占位符
     /// </summary>
     [RelayCommand]
     private async Task CheckExcelPlaceholders()
@@ -926,19 +1004,12 @@ public partial class MainViewModel : ObservableObject
             var placeholders = await _excelTemplateService.ExtractPlaceholdersAsync(ExcelTemplatePath);
 
             DetectedExcelPlaceholders.Clear();
-            foreach (var placeholder in placeholders)
-            {
-                DetectedExcelPlaceholders.Add(placeholder);
-            }
+            foreach (var placeholder in placeholders) DetectedExcelPlaceholders.Add(placeholder);
 
             if (placeholders.Count > 0)
-            {
                 StatusMessage = $"Excel模板中找到 {placeholders.Count} 个占位符";
-            }
             else
-            {
                 StatusMessage = "Excel模板中未找到任何占位符";
-            }
         }
         catch (Exception ex)
         {
@@ -951,7 +1022,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 清除Excel模板
+    ///     清除Excel模板
     /// </summary>
     [RelayCommand]
     private void ClearExcelTemplate()
@@ -959,5 +1030,207 @@ public partial class MainViewModel : ObservableObject
         ExcelTemplatePath = string.Empty;
         DetectedExcelPlaceholders.Clear();
         UseExcelTemplate = false;
+    }
+
+    /// <summary>
+    ///     添加图片目录
+    /// </summary>
+    [RelayCommand]
+    private async Task AddImageDirectory()
+    {
+        var dialog = new FolderBrowserDialog
+        {
+            Description = "选择包含图片的目录",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true
+        };
+
+        if (dialog.ShowDialog() == DialogResult.OK)
+            try
+            {
+                IsProcessing = true;
+
+                var directoryPath = dialog.SelectedPath;
+                var directoryName = Path.GetFileName(directoryPath);
+
+                // 确保目录名称不为空
+                if (string.IsNullOrEmpty(directoryName)) directoryName = new DirectoryInfo(directoryPath).Name;
+
+                // 检查是否已存在同名目录
+                if (ImageDirectories.Any(d =>
+                        d.DirectoryName.Equals(directoryName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var suffix = 1;
+                    var originalName = directoryName;
+                    // 自动添加数字后缀
+                    while (ImageDirectories.Any(d =>
+                               d.DirectoryName.Equals(directoryName, StringComparison.OrdinalIgnoreCase)))
+                        directoryName = $"{originalName}_{suffix++}";
+                }
+
+                StatusMessage = "正在扫描图片目录...";
+
+                // 扫描目录中的图片
+                var imageFiles = await _imageProcessingService.ScanDirectoryForImagesAsync(directoryPath);
+
+                if (imageFiles.Count == 0)
+                {
+                    StatusMessage = $"目录 {directoryName} 中未找到支持的图片文件";
+                    return;
+                }
+
+                // 创建图片目录对象
+                var imageDirectory = new ImageSourceDirectory
+                {
+                    DirectoryPath = directoryPath,
+                    DirectoryName = directoryName,
+                    MatchingColumn = SelectedImageMatchingColumn,
+                    ImageFiles = imageFiles
+                };
+
+                // 添加到列表
+                ImageDirectories.Add(imageDirectory);
+
+                // 自动启用图片替换功能
+                UseImageReplacement = true;
+
+                StatusMessage = $"已添加图片目录: {directoryName}，包含 {imageFiles.Count} 个图片";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"添加图片目录失败: {ex.Message}";
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
+    }
+
+    /// <summary>
+    ///     移除图片目录
+    /// </summary>
+    /// <param name="directory">要移除的目录</param>
+    [RelayCommand]
+    private void RemoveImageDirectory(ImageSourceDirectory directory)
+    {
+        if (ImageDirectories.Contains(directory))
+        {
+            ImageDirectories.Remove(directory);
+            StatusMessage = $"已移除图片目录: {directory.DirectoryName}";
+
+            // 如果没有图片目录，自动禁用图片替换功能
+            if (ImageDirectories.Count == 0) UseImageReplacement = false;
+        }
+    }
+
+    /// <summary>
+    ///     设置图片目录的匹配列
+    /// </summary>
+    /// <param name="parameters">参数元组 (ImageSourceDirectory, string)</param>
+    [RelayCommand]
+    private void SetDirectoryMatchingColumn(object parameters)
+    {
+        if (parameters is ValueTuple<ImageSourceDirectory, string> tuple)
+        {
+            var (directory, columnName) = tuple;
+
+            if (directory != null && !string.IsNullOrEmpty(columnName))
+            {
+                directory.MatchingColumn = columnName;
+
+                // 触发UI更新
+                var index = ImageDirectories.IndexOf(directory);
+                if (index >= 0) ImageDirectories[index] = directory;
+
+                StatusMessage = $"已设置 {directory.DirectoryName} 的匹配列为 {columnName}";
+            }
+        }
+    }
+
+    /// <summary>
+    ///     检查指定目录中的图片文件
+    /// </summary>
+    /// <param name="directory">图片目录对象</param>
+    [RelayCommand]
+    private async Task CheckDirectoryImages(ImageSourceDirectory directory)
+    {
+        if (directory == null) return;
+
+        try
+        {
+            IsProcessing = true;
+            StatusMessage = $"正在扫描目录 {directory.DirectoryName} 中的图片...";
+
+            // 重新扫描目录
+            var imageFiles = await _imageProcessingService.ScanDirectoryForImagesAsync(directory.DirectoryPath);
+
+            // 更新图片列表
+            directory.ImageFiles.Clear();
+            foreach (var file in imageFiles) directory.ImageFiles.Add(file);
+
+            // 触发UI更新
+            var index = ImageDirectories.IndexOf(directory);
+            if (index >= 0) ImageDirectories[index] = directory;
+
+            StatusMessage = $"目录 {directory.DirectoryName} 中找到 {imageFiles.Count} 个图片";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"扫描图片目录失败: {ex.Message}";
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    /// <summary>
+    ///     清除所有图片目录
+    /// </summary>
+    [RelayCommand]
+    private void ClearAllImageDirectories()
+    {
+        ImageDirectories.Clear();
+        UseImageReplacement = false;
+        StatusMessage = "已清除所有图片目录";
+    }
+
+    // 更新数据列变更处理
+    partial void OnAvailableColumnsChanged(ObservableCollection<string> value)
+    {
+        // 当可用列更新时，也更新图片匹配列下拉框
+        // 保持当前选择（如果存在）
+        if (!string.IsNullOrEmpty(SelectedImageMatchingColumn) &&
+            value.Contains(SelectedImageMatchingColumn))
+        {
+            // 保持当前选择
+        }
+        else if (value.Count > 0)
+        {
+            // 尝试智能选择匹配列（优先选择名称、ID等常用标识符）
+            var preferredColumns = value.Where(c =>
+                c.Contains("姓名", StringComparison.OrdinalIgnoreCase) ||
+                c.Contains("名字", StringComparison.OrdinalIgnoreCase) ||
+                c.Contains("ID", StringComparison.OrdinalIgnoreCase) ||
+                c.Contains("编号", StringComparison.OrdinalIgnoreCase) ||
+                c.Contains("身份证", StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+
+            if (preferredColumns.Any())
+                SelectedImageMatchingColumn = preferredColumns.First();
+            else
+                // 默认选择第一列
+                SelectedImageMatchingColumn = value.First();
+        }
+        else
+        {
+            SelectedImageMatchingColumn = string.Empty;
+        }
+    }
+
+    // 当选中的填充模式项变化时，更新实际的枚举值
+    partial void OnSelectedImageFillModeItemChanged(ImageFillModeItem value)
+    {
+        if (value != null) ImageFillMode = value.Value;
     }
 }
