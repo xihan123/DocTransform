@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using ClosedXML.Excel;
 using DocTransform.Models;
+using OfficeOpenXml;
 
 namespace DocTransform.Services;
 
@@ -9,6 +10,13 @@ namespace DocTransform.Services;
 /// </summary>
 public class ExcelService
 {
+    // 静态构造函数，用于设置EPPlus的LicenseContext
+    static ExcelService()
+    {
+        // 设置EPPlus的LicenseContext为非商业用途
+        ExcelPackage.License.SetNonCommercialOrganization("xihan123");
+    }
+
     /// <summary>
     ///     异步读取Excel文件
     /// </summary>
@@ -57,6 +65,71 @@ public class ExcelService
             }
 
             return excelData;
+        });
+    }
+
+
+    // 读取Excel文件中所有工作表的方法
+    public async Task<List<ExcelData>> ReadAllSheetsAsync(string filePath)
+    {
+        return await Task.Run(() =>
+        {
+            var result = new List<ExcelData>();
+
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(filePath)))
+                {
+                    foreach (var worksheet in package.Workbook.Worksheets)
+                    {
+                        // 跳过空工作表
+                        if (worksheet.Dimension == null) continue;
+
+                        var sheetData = new ExcelData
+                        {
+                            SourceFileName = $"{Path.GetFileName(filePath)} - {worksheet.Name}"
+                        };
+
+                        // 读取列标题
+                        var colCount = worksheet.Dimension.End.Column;
+                        for (var col = 1; col <= colCount; col++)
+                        {
+                            var headerCell = worksheet.Cells[1, col].Text.Trim();
+                            if (!string.IsNullOrEmpty(headerCell)) sheetData.Headers.Add(headerCell);
+                        }
+
+                        // 读取数据行
+                        var rowCount = worksheet.Dimension.End.Row;
+                        for (var row = 2; row <= rowCount; row++) // 从第二行开始，跳过标题行
+                        {
+                            var dataRow = new Dictionary<string, string>();
+                            var hasData = false;
+
+                            for (var col = 1; col <= colCount; col++)
+                            {
+                                if (col > sheetData.Headers.Count) continue;
+
+                                var header = sheetData.Headers[col - 1];
+                                var cellValue = worksheet.Cells[row, col].Text.Trim();
+
+                                dataRow[header] = cellValue;
+                                if (!string.IsNullOrEmpty(cellValue)) hasData = true;
+                            }
+
+                            if (hasData) sheetData.Rows.Add(dataRow);
+                        }
+
+                        // 只添加非空的工作表
+                        if (sheetData.Headers.Count > 0 && sheetData.Rows.Count > 0) result.Add(sheetData);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"读取Excel文件时出错: {ex.Message}", ex);
+            }
+
+            return result;
         });
     }
 }

@@ -62,6 +62,27 @@ public class BoolToColorConverter : IValueConverter
     }
 }
 
+/// <summary>
+///     将布尔值反向转换为可见性的转换器
+///     true -> Collapsed, false -> Visible
+/// </summary>
+public class InverseBoolToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue) return boolValue ? Visibility.Collapsed : Visibility.Visible;
+
+        return Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is Visibility visibility) return visibility != Visibility.Visible;
+
+        return false;
+    }
+}
+
 public class FilenameOnlyConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -86,6 +107,43 @@ public class BoolToIconConverter : IValueConverter
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class BoolToStringConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue && parameter is string options)
+        {
+            var parts = options.Split(';');
+            if (parts.Length >= 2) return boolValue ? parts[0] : parts[1];
+        }
+
+        return value?.ToString() ?? string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class GreaterThanConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length < 2) return false;
+
+        if (values[0] is int value1 && values[1] is string value2Str && int.TryParse(value2Str, out var value2))
+            return value1 > value2;
+
+        return false;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }

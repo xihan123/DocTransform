@@ -18,8 +18,11 @@
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
             <converters:FilenameOnlyConverter x:Key="FilenameOnlyConverter" />
             <converters:BoolToIconConverter x:Key="BoolToIconConverter" />
+            <converters:GreaterThanConverter x:Key="GreaterThanConverter" />
+            <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

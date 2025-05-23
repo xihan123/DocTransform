@@ -148,14 +148,53 @@
                                         文件选择
                                     </TextBlock>
 
-                                    <!-- Excel文件选择 -->
+                                    <!-- 表格模式切换 -->
+                                    <DockPanel Margin="0,0,0,16">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <TextBlock Text="多表格模式" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                       ToolTip="启用后可导入多个Excel表格并自动匹配数据" />
+
+                                            <!-- 替换ToggleButton为普通Button -->
+                                            <Button Command="{Binding ToggleTableModeCommand}"
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    ToolTip="切换表格模式">
+                                                <materialDesign:PackIcon
+                                                    Kind="{Binding IsMultiTableMode, Converter={StaticResource BoolToIconConverter}, ConverterParameter='ToggleOn;ToggleOff'}"
+                                                    Width="24" Height="24" />
+                                            </Button>
+                                        </StackPanel>
+                                        <TextBlock Style="{StaticResource MaterialDesignBody1TextBlock}"
+                                                   VerticalAlignment="Center" FontWeight="Medium">
+                                            <Run Text="当前模式: " />
+                                            <Run x:Name="ModeText" FontWeight="Bold">
+                                                <Run.Style>
+                                                    <Style TargetType="Run">
+                                                        <Setter Property="Text" Value="单表格" />
+                                                        <Setter Property="Foreground"
+                                                                Value="{DynamicResource PrimaryHueMidBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsMultiTableMode}"
+                                                                         Value="True">
+                                                                <Setter Property="Text" Value="多表格" />
+                                                                <Setter Property="Foreground"
+                                                                        Value="{DynamicResource SecondaryHueMidBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Run.Style>
+                                            </Run>
+                                        </TextBlock>
+                                    </DockPanel>
+
+                                    <!-- Excel文件选择 - 支持多表格 -->
                                     <DockPanel Margin="0,0,0,8">
                                         <Button DockPanel.Dock="Right" Margin="8,0,0,0"
                                                 Style="{StaticResource MaterialDesignRaisedLightButton}"
                                                 Command="{Binding BrowseExcelFileCommand}">
                                             <StackPanel Orientation="Horizontal">
                                                 <materialDesign:PackIcon Kind="FileExcel" />
-                                                <TextBlock Margin="8,0,0,0" Text="浏览" />
+                                                <TextBlock Margin="8,0,0,0"
+                                                           Text="{Binding IsMultiTableMode, Converter={StaticResource BoolToStringConverter}, ConverterParameter='添加Excel;浏览'}" />
                                             </StackPanel>
                                         </Button>
                                         <materialDesign:Card>
@@ -166,7 +205,8 @@
                                                 <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
                                                            Text="{Binding ExcelFilePath, Converter={StaticResource FilenameOnlyConverter}}"
                                                            TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                                                           ToolTip="{Binding ExcelFilePath}">
+                                                           ToolTip="{Binding ExcelFilePath}"
+                                                           Visibility="{Binding IsMultiTableMode, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock"
                                                                BasedOn="{StaticResource MaterialDesignTextBlock}">
@@ -182,9 +222,145 @@
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
+
+                                                <!-- 多表格模式显示摘要 -->
+                                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
+                                                           Visibility="{Binding IsMultiTableMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock"
+                                                               BasedOn="{StaticResource MaterialDesignTextBlock}">
+                                                            <Setter Property="Text" Value="未添加Excel表格" />
+                                                            <Setter Property="Foreground"
+                                                                    Value="{DynamicResource MaterialDesignBodyLight}" />
+                                                            <Setter Property="FontStyle" Value="Italic" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger
+                                                                    Binding="{Binding MultiTableData.Tables.Count}"
+                                                                    Value="0">
+                                                                    <Setter Property="Text" Value="未添加Excel表格" />
+                                                                    <Setter Property="Foreground"
+                                                                            Value="{DynamicResource MaterialDesignBodyLight}" />
+                                                                    <Setter Property="FontStyle" Value="Italic" />
+                                                                </DataTrigger>
+                                                                <DataTrigger
+                                                                    Binding="{Binding MultiTableData.Tables.Count}"
+                                                                    Value="1">
+                                                                    <Setter Property="Text" Value="已添加1个表格" />
+                                                                    <Setter Property="Foreground"
+                                                                            Value="{DynamicResource MaterialDesignBody}" />
+                                                                    <Setter Property="FontStyle" Value="Normal" />
+                                                                </DataTrigger>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition
+                                                                            Binding="{Binding MultiTableData.Tables.Count}"
+                                                                            Value="0" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Text"
+                                                                            Value="{Binding MultiTableData.Tables.Count, StringFormat='已添加{0}个表格'}" />
+                                                                    <Setter Property="Foreground"
+                                                                            Value="{DynamicResource MaterialDesignBody}" />
+                                                                    <Setter Property="FontStyle" Value="Normal" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </DockPanel>
                                         </materialDesign:Card>
                                     </DockPanel>
+
+                                    <!-- 添加多表格列表显示 -->
+                                    <materialDesign:Card Margin="0,0,0,16"
+                                                         Visibility="{Binding IsMultiTableMode, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                         UniformCornerRadius="4">
+                                        <StackPanel>
+                                            <!-- 表格列表标题 -->
+                                            <materialDesign:ColorZone Mode="PrimaryLight" CornerRadius="4,4,0,0">
+                                                <DockPanel Margin="8">
+                                                    <materialDesign:PackIcon Kind="TableMultiple"
+                                                                             VerticalAlignment="Center" />
+                                                    <TextBlock Text="已添加的表格" Margin="8,0,0,0" FontWeight="Medium" />
+                                                    <TextBlock
+                                                        Text="{Binding MultiTableData.TotalRowCount, StringFormat='(共{0}行数据)'}"
+                                                        Margin="8,0,0,0"
+                                                        Foreground="{DynamicResource MaterialDesignBodyLight}" />
+                                                </DockPanel>
+                                            </materialDesign:ColorZone>
+
+                                            <!-- 表格列表 -->
+                                            <ItemsControl ItemsSource="{Binding MultiTableData.Tables}"
+                                                          MaxHeight="150"
+                                                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl.Template>
+                                                    <ControlTemplate TargetType="ItemsControl">
+                                                        <ScrollViewer>
+                                                            <ItemsPresenter />
+                                                        </ScrollViewer>
+                                                    </ControlTemplate>
+                                                </ItemsControl.Template>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <materialDesign:Card Margin="4" UniformCornerRadius="4">
+                                                            <DockPanel Margin="8,4">
+                                                                <Button DockPanel.Dock="Right"
+                                                                        Style="{StaticResource MaterialDesignIconButton}"
+                                                                        Command="{Binding DataContext.RemoveTableCommand, 
+                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        ToolTip="删除此表格">
+                                                                    <materialDesign:PackIcon Kind="DeleteOutline" />
+                                                                </Button>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="{Binding SourceFileName}"
+                                                                               FontWeight="Medium"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock
+                                                                        Text="{Binding RowCount, StringFormat='共{0}行数据'}"
+                                                                        Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                                                        Foreground="{DynamicResource MaterialDesignBodyLight}" />
+                                                                </StackPanel>
+                                                            </DockPanel>
+                                                        </materialDesign:Card>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <!-- 匹配键选择 -->
+                                            <DockPanel Margin="16,8" LastChildFill="True">
+                                                <TextBlock Text="选择用于匹配记录的列："
+                                                           DockPanel.Dock="Left" VerticalAlignment="Center"
+                                                           Margin="0,0,8,0" />
+                                                <ComboBox ItemsSource="{Binding AvailableKeyColumns}"
+                                                          SelectedItem="{Binding SelectedKeyColumn}"
+                                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                          materialDesign:HintAssist.Hint="选择一个在所有表格中存在的列作为匹配键"
+                                                          DisplayMemberPath="."
+                                                          HorizontalAlignment="Stretch">
+                                                    <ComboBox.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <VirtualizingStackPanel />
+                                                        </ItemsPanelTemplate>
+                                                    </ComboBox.ItemsPanel>
+                                                </ComboBox>
+                                            </DockPanel>
+
+                                            <!-- 合并结果显示 -->
+                                            <DockPanel Margin="16,0,16,8"
+                                                       Visibility="{Binding SelectedKeyColumn, Converter={StaticResource StringToVisibilityConverter}}">
+                                                <materialDesign:PackIcon Kind="LinkVariant" VerticalAlignment="Center" />
+                                                <TextBlock Margin="8,0,0,0">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding StringFormat="已使用 {0} 列合并数据，共有 {1} 条记录">
+                                                            <Binding Path="SelectedKeyColumn" />
+                                                            <Binding Path="MultiTableData.MergedRows.Count" />
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </materialDesign:Card>
+
 
                                     <!-- Word模板选择 -->
                                     <DockPanel Margin="0,0,0,8">

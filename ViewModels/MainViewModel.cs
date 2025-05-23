@@ -27,6 +27,10 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private ObservableCollection<string> _availableIdCardColumns = new();
 
+    [ObservableProperty] private ObservableCollection<string> _availableKeyColumns = new();
+
+    [ObservableProperty] private ExcelData _currentExcelData;
+
     // 身份证信息提取相关属性
     [ObservableProperty] private bool _enableIdCardExtraction;
 
@@ -37,7 +41,12 @@ public partial class MainViewModel : ObservableObject
     // 身份证占位符集合
     [ObservableProperty] private List<string> _idCardPlaceholders = PlaceholderConstants.AllPlaceholders;
 
+    [ObservableProperty] private bool _isMultiTableMode;
+
     [ObservableProperty] private bool _isProcessing;
+
+    // 多表格相关属性
+    [ObservableProperty] private MultiTableData _multiTableData = new();
 
     [ObservableProperty] private string _outputDirectory = string.Empty;
 
@@ -54,6 +63,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private ObservableCollection<string> _selectedColumns = new();
 
     [ObservableProperty] private string _selectedIdCardColumn = string.Empty;
+
+    [ObservableProperty] private string _selectedKeyColumn = string.Empty;
 
     [ObservableProperty] private string _statusMessage = "准备就绪";
 
@@ -83,7 +94,222 @@ public partial class MainViewModel : ObservableObject
         if (dialog.ShowDialog() == true)
         {
             ExcelFilePath = dialog.FileName;
-            await LoadExcelFile(ExcelFilePath);
+
+            if (IsMultiTableMode)
+                await AddExcelFileToMultiTable(ExcelFilePath);
+            else
+                await LoadSingleExcelFile(ExcelFilePath);
+        }
+    }
+
+    // 单文件模式加载Excel
+    private async Task LoadSingleExcelFile(string filePath)
+    {
+        try
+        {
+            StatusMessage = "正在加载Excel文件...";
+            IsProcessing = true;
+
+            _excelData = await _excelService.ReadExcelFileAsync(filePath);
+            CurrentExcelData = _excelData;
+
+            // 更新可用列
+            UpdateAvailableColumns();
+
+            // 更新身份证列
+            UpdateIdCardColumns();
+
+            StatusMessage = $"Excel文件加载完成，共有 {_excelData.Rows.Count} 行数据";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"加载Excel文件失败: {ex.Message}";
+            ExcelFilePath = string.Empty;
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    // 多表格模式添加Excel文件
+    private async Task AddExcelFileToMultiTable(string filePath)
+    {
+        try
+        {
+            StatusMessage = "正在加载Excel文件...";
+            IsProcessing = true;
+
+            var allSheets = await _excelService.ReadAllSheetsAsync(filePath);
+
+            if (allSheets.Count == 0)
+            {
+                StatusMessage = "Excel文件中没有有效数据";
+                return;
+            }
+
+            // 添加到多表格数据中
+            foreach (var sheet in allSheets) _multiTableData.Tables.Add(sheet);
+
+            // 更新可用的键列（必须存在于所有表中）
+            UpdateKeyColumns();
+
+            // 更新可用列（所有表中的列，无重复）
+            UpdateAvailableColumns();
+
+            // 更新身份证列
+            UpdateIdCardColumns();
+
+            StatusMessage = $"添加了 {allSheets.Count} 个工作表，共有 {_multiTableData.TotalRowCount} 行数据";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"加载Excel文件失败: {ex.Message}";
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    // 更新可用列
+    private void UpdateAvailableColumns()
+    {
+        AvailableColumns.Clear();
+        SelectedColumns.Clear();
+
+        if (IsMultiTableMode)
+        {
+            foreach (var header in _multiTableData.AllHeaders) AvailableColumns.Add(header);
+
+            // 如果选择了Key列，则执行合并
+            if (!string.IsNullOrEmpty(SelectedKeyColumn)) _multiTableData.MergeData(SelectedKeyColumn);
+        }
+        else if (CurrentExcelData != null)
+        {
+            foreach (var header in CurrentExcelData.Headers) AvailableColumns.Add(header);
+        }
+    }
+
+    // 更新可用于匹配的键列
+    private void UpdateKeyColumns()
+    {
+        AvailableKeyColumns.Clear();
+        SelectedKeyColumn = string.Empty;
+
+        if (IsMultiTableMode)
+            // 只有在所有表中都存在的列才能作为键列
+            foreach (var header in _multiTableData.CommonHeaders)
+            {
+                AvailableKeyColumns.Add(header);
+
+                // 自动选择可能的键列
+                if (string.IsNullOrEmpty(SelectedKeyColumn))
+                    if (header.Contains("身份证", StringComparison.OrdinalIgnoreCase) ||
+                        header.Contains("ID", StringComparison.OrdinalIgnoreCase) ||
+                        header.Contains("编号", StringComparison.OrdinalIgnoreCase) ||
+                        header.Contains("姓名", StringComparison.OrdinalIgnoreCase) ||
+                        header.Contains("名字", StringComparison.OrdinalIgnoreCase))
+                        SelectedKeyColumn = header;
+            }
+    }
+
+    // 更新可能的身份证列
+    private void UpdateIdCardColumns()
+    {
+        AvailableIdCardColumns.Clear();
+        SelectedIdCardColumn = string.Empty;
+
+        List<string> headers;
+
+        if (IsMultiTableMode)
+            // 多表格模式下，使用合并后的所有列
+            headers = _multiTableData.AllHeaders;
+        else if (CurrentExcelData != null)
+            // 单表格模式下，使用当前表格的列
+            headers = CurrentExcelData.Headers;
+        else
+            return;
+
+        foreach (var header in headers)
+            // 检测可能的身份证列（名称中包含"身份证"、"证件"等关键词）
+            if (header.Contains("身份证", StringComparison.OrdinalIgnoreCase) ||
+                header.Contains("证件", StringComparison.OrdinalIgnoreCase) ||
+                header.Contains("ID", StringComparison.OrdinalIgnoreCase))
+            {
+                AvailableIdCardColumns.Add(header);
+                if (string.IsNullOrEmpty(SelectedIdCardColumn))
+                    // 优先选择包含"身份证"的列作为默认选择
+                    if (header.Contains("身份证", StringComparison.OrdinalIgnoreCase))
+                        SelectedIdCardColumn = header;
+            }
+
+        // 如果没有找到包含"身份证"的列，则使用第一个可用的身份证列
+        if (string.IsNullOrEmpty(SelectedIdCardColumn) && AvailableIdCardColumns.Count > 0)
+            SelectedIdCardColumn = AvailableIdCardColumns[0];
+
+        // 如果启用了身份证信息提取但没有找到可用的身份证列，可以考虑给用户一个提示
+        if (EnableIdCardExtraction && string.IsNullOrEmpty(SelectedIdCardColumn))
+            StatusMessage = "警告：已启用身份证信息提取，但未找到可能的身份证列";
+    }
+
+    // 切换单表格/多表格模式
+    [RelayCommand]
+    private void ToggleTableMode()
+    {
+        // 添加调试输出，确认命令被触发
+        Debug.WriteLine($"ToggleTableMode 被调用，当前模式: {IsMultiTableMode}");
+
+        IsMultiTableMode = !IsMultiTableMode;
+
+        if (IsMultiTableMode)
+        {
+            // 切换到多表格模式
+            _multiTableData.Clear();
+            if (CurrentExcelData != null)
+            {
+                // 将当前的单表格添加到多表格中
+                _multiTableData.Tables.Add(CurrentExcelData);
+                UpdateKeyColumns();
+            }
+
+            StatusMessage = "已切换到多表格模式";
+        }
+        else
+        {
+            // 切换到单表格模式
+            CurrentExcelData = _multiTableData.Tables.Count > 0 ? _multiTableData.Tables[0] : new ExcelData();
+            _excelData = CurrentExcelData;
+            UpdateAvailableColumns();
+            UpdateIdCardColumns();
+            StatusMessage = "已切换到单表格模式";
+        }
+
+        // 添加调试输出，确认模式已切换
+        Debug.WriteLine($"模式已切换为: {(IsMultiTableMode ? "多表格" : "单表格")}");
+    }
+
+    // 移除指定表格
+    [RelayCommand]
+    private void RemoveTable(ExcelData table)
+    {
+        if (_multiTableData.Tables.Contains(table))
+        {
+            _multiTableData.Tables.Remove(table);
+            UpdateKeyColumns();
+            UpdateAvailableColumns();
+            UpdateIdCardColumns();
+            StatusMessage = $"已移除表格: {table.SourceFileName}";
+        }
+    }
+
+    // 修改键列选择事件
+    partial void OnSelectedKeyColumnChanged(string value)
+    {
+        if (IsMultiTableMode && !string.IsNullOrEmpty(value))
+        {
+            _multiTableData.MergeData(value);
+            StatusMessage = $"已使用 \"{value}\" 列合并数据，共有 {_multiTableData.MergedRows.Count} 条记录";
         }
     }
 
@@ -249,12 +475,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task GenerateDocuments()
     {
-        if (string.IsNullOrEmpty(ExcelFilePath))
-        {
-            StatusMessage = "请先选择Excel文件";
-            return;
-        }
-
         if (string.IsNullOrEmpty(WordTemplatePath))
         {
             StatusMessage = "请选择Word模板";
@@ -267,13 +487,44 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        if (_excelData.Rows.Count == 0)
-        {
-            StatusMessage = "Excel文件中没有有效数据";
-            return;
-        }
-
         if (string.IsNullOrEmpty(OutputFileNameTemplate)) OutputFileNameTemplate = "{序号}_{时间}";
+
+        // 验证数据源
+        List<Dictionary<string, string>> dataRows;
+
+        if (IsMultiTableMode)
+        {
+            if (_multiTableData.Tables.Count == 0)
+            {
+                StatusMessage = "请先添加Excel文件";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(SelectedKeyColumn))
+            {
+                StatusMessage = "请选择用于匹配记录的列";
+                return;
+            }
+
+            // 使用合并后的数据
+            dataRows = _multiTableData.MergedRows;
+
+            if (dataRows.Count == 0)
+            {
+                StatusMessage = "合并后没有有效数据";
+                return;
+            }
+        }
+        else
+        {
+            if (_excelData.Rows.Count == 0)
+            {
+                StatusMessage = "Excel文件中没有有效数据";
+                return;
+            }
+
+            dataRows = _excelData.Rows;
+        }
 
         // 校验身份证提取设置
         if (EnableIdCardExtraction && string.IsNullOrEmpty(SelectedIdCardColumn))
@@ -286,23 +537,23 @@ public partial class MainViewModel : ObservableObject
         {
             IsProcessing = true;
             ProgressValue = 0;
-            TotalItems = _excelData.Rows.Count;
+            TotalItems = dataRows.Count;
             ProcessedItems = 0;
             ProcessResultText = string.Empty;
 
             var successCount = 0;
             var failCount = 0;
 
-            for (var i = 0; i < _excelData.Rows.Count; i++)
+            for (var i = 0; i < dataRows.Count; i++)
             {
-                var rowData = new Dictionary<string, string>(_excelData.Rows[i]);
+                var rowData = new Dictionary<string, string>(dataRows[i]);
 
                 // 添加一些特殊变量
                 rowData["序号"] = (i + 1).ToString();
                 rowData["时间"] = DateTime.Now.ToString("yyyyMMdd-HHmmss");
                 rowData["日期"] = DateTime.Now.ToString("yyyy-MM-dd");
 
-                // 处理身份证信息提取
+                // 处理身份证信息提取 (保持原有逻辑)
                 if (EnableIdCardExtraction && !string.IsNullOrEmpty(SelectedIdCardColumn) &&
                     rowData.TryGetValue(SelectedIdCardColumn, out var idCard) &&
                     !string.IsNullOrEmpty(idCard))
