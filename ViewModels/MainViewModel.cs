@@ -72,11 +72,24 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private string _wordTemplatePath = string.Empty;
 
+    // Excel模板相关属性
+    private readonly ExcelTemplateService _excelTemplateService;
+
+    [ObservableProperty]
+    private string _excelTemplatePath = string.Empty;
+
+    [ObservableProperty]
+    private bool _useExcelTemplate = false;
+
+    [ObservableProperty]
+    private ObservableCollection<string> _detectedExcelPlaceholders = new();
+
     public MainViewModel()
     {
         _excelService = new ExcelService();
         _wordService = new WordService();
         _idCardService = new IdCardService();
+        _excelTemplateService = new ExcelTemplateService();
 
         // 设置默认输出目录为"我的文档"
         OutputDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -475,12 +488,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task GenerateDocuments()
     {
-        if (string.IsNullOrEmpty(WordTemplatePath))
-        {
-            StatusMessage = "请选择Word模板";
-            return;
-        }
-
         if (string.IsNullOrEmpty(OutputDirectory) || !Directory.Exists(OutputDirectory))
         {
             StatusMessage = "请选择有效的输出目录";
@@ -489,11 +496,22 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrEmpty(OutputFileNameTemplate)) OutputFileNameTemplate = "{序号}_{时间}";
 
+        // 验证Word模板或Excel模板至少选择一个
+        bool hasWordTemplate = !string.IsNullOrEmpty(WordTemplatePath) && File.Exists(WordTemplatePath);
+        bool hasExcelTemplate = UseExcelTemplate && !string.IsNullOrEmpty(ExcelTemplatePath) && File.Exists(ExcelTemplatePath);
+
+        if (!hasWordTemplate && !hasExcelTemplate)
+        {
+            StatusMessage = "请至少选择一个Word模板或Excel模板";
+            return;
+        }
+
         // 验证数据源
         List<Dictionary<string, string>> dataRows;
 
         if (IsMultiTableMode)
         {
+            // 多表格模式处理...
             if (_multiTableData.Tables.Count == 0)
             {
                 StatusMessage = "请先添加Excel文件";
@@ -506,7 +524,6 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // 使用合并后的数据
             dataRows = _multiTableData.MergedRows;
 
             if (dataRows.Count == 0)
@@ -541,10 +558,14 @@ public partial class MainViewModel : ObservableObject
             ProcessedItems = 0;
             ProcessResultText = string.Empty;
 
-            var successCount = 0;
-            var failCount = 0;
+            int successCount = 0;
+            int failCount = 0;
 
-            for (var i = 0; i < dataRows.Count; i++)
+            // 统计需要生成的文档总数
+            int totalDocuments = dataRows.Count * (hasWordTemplate && hasExcelTemplate ? 2 : 1);
+            int processedDocuments = 0;
+
+            for (int i = 0; i < dataRows.Count; i++)
             {
                 var rowData = new Dictionary<string, string>(dataRows[i]);
 
@@ -553,28 +574,22 @@ public partial class MainViewModel : ObservableObject
                 rowData["时间"] = DateTime.Now.ToString("yyyyMMdd-HHmmss");
                 rowData["日期"] = DateTime.Now.ToString("yyyy-MM-dd");
 
-                // 处理身份证信息提取 (保持原有逻辑)
+                // 处理身份证信息提取
                 if (EnableIdCardExtraction && !string.IsNullOrEmpty(SelectedIdCardColumn) &&
-                    rowData.TryGetValue(SelectedIdCardColumn, out var idCard) &&
+                    rowData.TryGetValue(SelectedIdCardColumn, out string? idCard) &&
                     !string.IsNullOrEmpty(idCard))
+                {
                     try
                     {
-                        // 在日志中输出原始身份证号，方便调试
-                        Debug.WriteLine($"处理身份证号: {idCard}");
-
-                        // 添加提取的信息
-                        var gender = _idCardService.ExtractGender(idCard);
-                        var birthDate = _idCardService.ExtractBirthDate(idCard);
-                        var region = _idCardService.ExtractRegion(idCard);
-
-                        // 输出提取结果到日志
-                        Debug.WriteLine($"提取结果: 性别={gender}, 生日={birthDate}, 地区={region}");
+                        // 身份证信息提取逻辑...
+                        string gender = _idCardService.ExtractGender(idCard);
+                        string birthDate = _idCardService.ExtractBirthDate(idCard);
+                        string region = _idCardService.ExtractRegion(idCard);
 
                         rowData["身份证性别"] = gender;
                         rowData["身份证出生日期"] = birthDate;
                         rowData["身份证籍贯"] = region;
 
-                        // 提供更多格式的出生日期
                         rowData["身份证出生年"] = _idCardService.ExtractBirthDate(idCard, "yyyy");
                         rowData["身份证出生月"] = _idCardService.ExtractBirthDate(idCard, "MM");
                         rowData["身份证出生日"] = _idCardService.ExtractBirthDate(idCard, "dd");
@@ -582,10 +597,9 @@ public partial class MainViewModel : ObservableObject
                     }
                     catch (Exception ex)
                     {
-                        // 捕获异常但不中断处理，记录错误信息
-                        Debug.WriteLine($"身份证信息提取出错: {ex.Message}");
+                        // 异常处理...
+                        System.Diagnostics.Debug.WriteLine($"身份证信息提取出错: {ex.Message}");
 
-                        // 设置默认值
                         rowData["身份证性别"] = "未知";
                         rowData["身份证出生日期"] = "未知";
                         rowData["身份证籍贯"] = "未知";
@@ -594,39 +608,77 @@ public partial class MainViewModel : ObservableObject
                         rowData["身份证出生日"] = "未知";
                         rowData["身份证年龄"] = "未知";
                     }
+                }
 
                 // 生成文件名
-                var fileName = OutputFileNameTemplate;
+                string fileName = OutputFileNameTemplate;
                 foreach (var item in rowData)
-                    fileName = fileName.Replace($"{{{item.Key}}}", item.Value ?? string.Empty,
-                        StringComparison.OrdinalIgnoreCase);
+                {
+                    fileName = fileName.Replace($"{{{item.Key}}}", item.Value ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+                }
 
                 // 处理无效字符
                 foreach (var invalidChar in Path.GetInvalidFileNameChars())
+                {
                     fileName = fileName.Replace(invalidChar, '_');
+                }
 
                 // 确保文件名有效
                 if (string.IsNullOrWhiteSpace(fileName) || fileName.All(c => c == '_'))
+                {
                     fileName = $"Document_{i + 1}_{DateTime.Now:yyyyMMdd-HHmmss}";
-
-                fileName = $"{fileName}.docx";
-                var outputPath = Path.Combine(OutputDirectory, fileName);
-
-                // 异步处理每个文档
-                var progress =
-                    new Progress<int>(value => { ProgressValue = (i * 100 + value) / _excelData.Rows.Count; });
-
-                var result = await _wordService.ProcessTemplateAsync(WordTemplatePath, outputPath, rowData, progress);
-
-                if (result.Success)
-                {
-                    successCount++;
                 }
-                else
+
+                // 处理Word模板
+                if (hasWordTemplate)
                 {
-                    failCount++;
-                    StatusMessage = $"处理第 {i + 1} 行数据时出错: {result.Message}";
+                    string wordOutputPath = Path.Combine(OutputDirectory, $"{fileName}.docx");
+
+                    // 异步处理Word文档
+                    var wordProgress = new Progress<int>(value => {
+                        ProgressValue = ((processedDocuments * 100) + value) / totalDocuments;
+                    });
+
+                    var wordResult = await _wordService.ProcessTemplateAsync(WordTemplatePath, wordOutputPath, rowData, wordProgress);
+
+                    if (wordResult.Success)
+                    {
+                        successCount++;
+                    }
+                    else
+                    {
+                        failCount++;
+                        StatusMessage = $"处理第 {i + 1} 行Word文档时出错: {wordResult.Message}";
+                    }
+
+                    processedDocuments++;
                 }
+
+                // 处理Excel模板
+                if (hasExcelTemplate)
+                {
+                    string excelOutputPath = Path.Combine(OutputDirectory, $"{fileName}.xlsx");
+
+                    // 异步处理Excel文档
+                    var excelProgress = new Progress<int>(value => {
+                        ProgressValue = ((processedDocuments * 100) + value) / totalDocuments;
+                    });
+
+                    var excelResult = await _excelTemplateService.ProcessTemplateAsync(ExcelTemplatePath, excelOutputPath, rowData, excelProgress);
+
+                    if (excelResult.Success)
+                    {
+                        successCount++;
+                    }
+                    else
+                    {
+                        failCount++;
+                        StatusMessage = $"处理第 {i + 1} 行Excel文档时出错: {excelResult.Message}";
+                    }
+
+                    processedDocuments++;
+                }
+
 
                 ProcessedItems = i + 1;
             }
@@ -821,5 +873,91 @@ public partial class MainViewModel : ObservableObject
         }
 
         return "未知";
+    }
+
+    /// <summary>
+    /// 浏览Excel模板文件
+    /// </summary>
+    [RelayCommand]
+    private async Task BrowseExcelTemplate()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "Excel模板 (*.xlsx)|*.xlsx",
+            Title = "选择Excel模板"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            ExcelTemplatePath = dialog.FileName;
+
+            // 验证Excel模板有效性
+            bool isValid = await _excelTemplateService.IsValidTemplateAsync(ExcelTemplatePath);
+            if (!isValid)
+            {
+                StatusMessage = "选择的Excel模板无效";
+                ExcelTemplatePath = string.Empty;
+            }
+            else
+            {
+                // 自动检查Excel占位符
+                await CheckExcelPlaceholders();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 检查Excel模板中的占位符
+    /// </summary>
+    [RelayCommand]
+    private async Task CheckExcelPlaceholders()
+    {
+        if (string.IsNullOrEmpty(ExcelTemplatePath) || !File.Exists(ExcelTemplatePath))
+        {
+            StatusMessage = "请先选择有效的Excel模板";
+            return;
+        }
+
+        try
+        {
+            IsProcessing = true;
+            StatusMessage = "正在检查Excel模板中的占位符...";
+
+            var placeholders = await _excelTemplateService.ExtractPlaceholdersAsync(ExcelTemplatePath);
+
+            DetectedExcelPlaceholders.Clear();
+            foreach (var placeholder in placeholders)
+            {
+                DetectedExcelPlaceholders.Add(placeholder);
+            }
+
+            if (placeholders.Count > 0)
+            {
+                StatusMessage = $"Excel模板中找到 {placeholders.Count} 个占位符";
+            }
+            else
+            {
+                StatusMessage = "Excel模板中未找到任何占位符";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"检查Excel占位符失败: {ex.Message}";
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    /// <summary>
+    /// 清除Excel模板
+    /// </summary>
+    [RelayCommand]
+    private void ClearExcelTemplate()
+    {
+        ExcelTemplatePath = string.Empty;
+        DetectedExcelPlaceholders.Clear();
+        UseExcelTemplate = false;
     }
 }

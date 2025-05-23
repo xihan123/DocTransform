@@ -23,6 +23,8 @@
             <converters:BoolToIconConverter x:Key="BoolToIconConverter" />
             <converters:GreaterThanConverter x:Key="GreaterThanConverter" />
             <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
+            <converters:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter"/>
+            <converters:NotZeroToVisibilityConverter x:Key="NotZeroToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
