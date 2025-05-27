@@ -125,10 +125,21 @@ public partial class MainViewModel : ObservableObject
         _imageProcessingService = new ImageProcessingService();
         _excelTemplateService = new ExcelTemplateService(_imageProcessingService);
 
-        // 设置默认输出目录为"我的文档"
-        OutputDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        // 从应用程序设置加载上次使用的输出目录
+        OutputDirectory = AppSettings.Instance.LastOutputDirectory;
         // 初始化选中的填充模式
         SelectedImageFillModeItem = ImageFillModeItems.First(item => item.Value == ImageFillMode.Fit);
+    }
+
+    // 当输出目录变化时保存设置
+    partial void OnOutputDirectoryChanged(string value)
+    {
+        if (!string.IsNullOrEmpty(value) && Directory.Exists(value))
+        {
+            // 保存当前输出目录到设置中
+            AppSettings.Instance.LastOutputDirectory = value;
+            AppSettings.Instance.Save();
+        }
     }
 
     [RelayCommand]
@@ -396,10 +407,25 @@ public partial class MainViewModel : ObservableObject
         var dialog = new FolderBrowserDialog
         {
             Description = "选择输出目录",
-            UseDescriptionForTitle = true
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true
         };
 
+        // 如果当前目录有效，设为初始目录
+        if (!string.IsNullOrEmpty(OutputDirectory) && Directory.Exists(OutputDirectory))
+            dialog.SelectedPath = OutputDirectory;
+
         if (dialog.ShowDialog() == DialogResult.OK) OutputDirectory = dialog.SelectedPath;
+        // 保存到设置（这里可以省略，因为已经在OnOutputDirectoryChanged中处理了）
+        // AppSettings.Instance.LastOutputDirectory = OutputDirectory;
+        // AppSettings.Instance.Save();
+    }
+
+    // 实现IDisposable接口，在应用程序关闭时保存设置
+    public void Dispose()
+    {
+        // 确保在应用程序关闭时保存设置
+        AppSettings.Instance.Save();
     }
 
     [RelayCommand]
