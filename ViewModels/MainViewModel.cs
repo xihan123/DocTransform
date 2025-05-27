@@ -661,7 +661,7 @@ public partial class MainViewModel : ObservableObject
 
                 // 添加一些特殊变量
                 rowData["序号"] = (i + 1).ToString();
-                rowData["时间"] = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                rowData["时间"] = DateTime.Now.ToString("yyyy-MM-dd");
                 rowData["日期"] = DateTime.Now.ToString("yyyy-MM-dd");
 
                 // 处理身份证信息提取
@@ -710,7 +710,7 @@ public partial class MainViewModel : ObservableObject
 
                 // 确保文件名有效
                 if (string.IsNullOrWhiteSpace(fileName) || fileName.All(c => c == '_'))
-                    fileName = $"Document_{i + 1}_{DateTime.Now:yyyyMMdd-HHmmss}";
+                    fileName = $"Document_{i + 1}_{DateTime.Now:yyyy-MM-dd}";
 
                 // 处理Word模板
                 if (hasWordTemplate)
