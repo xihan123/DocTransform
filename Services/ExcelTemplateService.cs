@@ -91,7 +91,7 @@ public class ExcelTemplateService
     }
 
     /// <summary>
-    ///     处理Excel模板，替换占位符
+    ///     处理Excel模板，替换占位符，保留原始格式
     /// </summary>
     /// <param name="templatePath">模板文件路径</param>
     /// <param name="outputPath">输出文件路径</param>
@@ -148,12 +148,114 @@ public class ExcelTemplateService
                                 var placeholder = $"{{{item.Key}}}";
                                 if (newValue.Contains(placeholder))
                                 {
+                                    // 不直接设置value，而是使用RichText来保留格式
+                                    // 先记住原始格式
+                                    var originalStyle = cell.Style;
+                                    var originalFormat = cell.Style.Numberformat.Format;
+
+                                    // 替换文本
                                     newValue = newValue.Replace(placeholder, item.Value ?? string.Empty);
                                     replaced = true;
                                 }
                             }
 
-                            if (replaced) cell.Value = newValue;
+                            if (replaced)
+                            {
+                                // 保存原始格式数据
+                                var originalStyle = new
+                                {
+                                    Font = new
+                                    {
+                                        cell.Style.Font.Name,
+                                        cell.Style.Font.Size,
+                                        cell.Style.Font.Bold,
+                                        cell.Style.Font.Italic,
+                                        cell.Style.Font.UnderLine,
+                                        cell.Style.Font.Strike,
+                                        cell.Style.Font.Color
+                                    },
+                                    Fill = new
+                                    {
+                                        cell.Style.Fill.BackgroundColor, cell.Style.Fill.PatternType
+                                    },
+                                    Border = new
+                                    {
+                                        cell.Style.Border.Bottom,
+                                        cell.Style.Border.Top,
+                                        cell.Style.Border.Left,
+                                        cell.Style.Border.Right
+                                    },
+                                    Alignment = new
+                                    {
+                                        Horizontal = cell.Style.HorizontalAlignment,
+                                        Vertical = cell.Style.VerticalAlignment,
+                                        cell.Style.WrapText
+                                    },
+                                    NumberFormat = cell.Style.Numberformat.Format
+                                };
+
+                                // 设置新的值
+                                cell.Value = newValue;
+
+                                // 确保恢复原始字体设置
+                                if (!string.IsNullOrEmpty(originalStyle.Font.Name))
+                                    cell.Style.Font.Name = originalStyle.Font.Name;
+
+                                if (originalStyle.Font.Size > 0)
+                                    cell.Style.Font.Size = originalStyle.Font.Size;
+
+                                cell.Style.Font.Bold = originalStyle.Font.Bold;
+                                cell.Style.Font.Italic = originalStyle.Font.Italic;
+                                cell.Style.Font.UnderLine = originalStyle.Font.UnderLine;
+                                cell.Style.Font.Strike = originalStyle.Font.Strike;
+
+                                if (originalStyle.Font.Color.Indexed > 0)
+                                    cell.Style.Font.Color.SetColor(
+                                        ColorTranslator.FromOle(originalStyle.Font.Color.Indexed));
+                                else if (!string.IsNullOrEmpty(originalStyle.Font.Color.Rgb))
+                                    cell.Style.Font.Color.SetColor(
+                                        ColorTranslator.FromHtml($"#{originalStyle.Font.Color.Rgb}"));
+
+                                // 恢复背景色和填充
+                                cell.Style.Fill.PatternType = originalStyle.Fill.PatternType;
+                                if (originalStyle.Fill.BackgroundColor.Indexed > 0)
+                                {
+                                    var color = ColorTranslator.FromOle(originalStyle.Fill.BackgroundColor.Indexed);
+                                    cell.Style.Fill.BackgroundColor.SetColor(color);
+                                }
+                                else if (!string.IsNullOrEmpty(originalStyle.Fill.BackgroundColor.Rgb))
+                                {
+                                    var color = ColorTranslator.FromHtml($"#{originalStyle.Fill.BackgroundColor.Rgb}");
+                                    cell.Style.Fill.BackgroundColor.SetColor(color);
+                                }
+
+                                // 恢复边框
+                                cell.Style.Border.Bottom.Style = originalStyle.Border.Bottom.Style;
+                                if (originalStyle.Border.Bottom.Color.Indexed > 0)
+                                {
+                                    var color = ColorTranslator.FromOle(originalStyle.Border.Bottom.Color.Indexed);
+                                    cell.Style.Border.Bottom.Color.SetColor(color);
+                                }
+                                else if (!string.IsNullOrEmpty(originalStyle.Border.Bottom.Color.Rgb))
+                                {
+                                    var color = ColorTranslator.FromHtml($"#{originalStyle.Border.Bottom.Color.Rgb}");
+                                    cell.Style.Border.Bottom.Color.SetColor(color);
+                                }
+
+                                cell.Style.Border.Bottom.Style = originalStyle.Border.Bottom.Style;
+                                cell.Style.Border.Top.Style = originalStyle.Border.Top.Style;
+                                cell.Style.Border.Left.Style = originalStyle.Border.Left.Style;
+                                cell.Style.Border.Right.Style = originalStyle.Border.Right.Style;
+
+                                // 恢复对齐方式
+                                cell.Style.HorizontalAlignment = originalStyle.Alignment.Horizontal;
+                                cell.Style.VerticalAlignment = originalStyle.Alignment.Vertical;
+                                cell.Style.WrapText = originalStyle.Alignment.WrapText;
+
+                                // 恢复数字格式
+                                if (!string.IsNullOrEmpty(originalStyle.NumberFormat))
+                                    cell.Style.Numberformat.Format = originalStyle.NumberFormat;
+                            }
                         }
                     }
 
@@ -254,11 +356,107 @@ public class ExcelTemplateService
                                 }
                             }
 
-                            if (replaced) cell.Value = newValue;
+                            if (replaced)
+                            {
+                                // 保存原始格式数据
+                                var originalStyle = new
+                                {
+                                    Font = new
+                                    {
+                                        cell.Style.Font.Name,
+                                        cell.Style.Font.Size,
+                                        cell.Style.Font.Bold,
+                                        cell.Style.Font.Italic,
+                                        cell.Style.Font.UnderLine,
+                                        cell.Style.Font.Strike,
+                                        cell.Style.Font.Color
+                                    },
+                                    Fill = new
+                                    {
+                                        cell.Style.Fill.BackgroundColor, cell.Style.Fill.PatternType
+                                    },
+                                    Border = new
+                                    {
+                                        cell.Style.Border.Bottom,
+                                        cell.Style.Border.Top,
+                                        cell.Style.Border.Left,
+                                        cell.Style.Border.Right
+                                    },
+                                    Alignment = new
+                                    {
+                                        Horizontal = cell.Style.HorizontalAlignment,
+                                        Vertical = cell.Style.VerticalAlignment,
+                                        cell.Style.WrapText
+                                    },
+                                    NumberFormat = cell.Style.Numberformat.Format
+                                };
+
+                                // 设置新的值
+                                cell.Value = newValue;
+
+                                // 确保恢复原始字体设置
+                                if (!string.IsNullOrEmpty(originalStyle.Font.Name))
+                                    cell.Style.Font.Name = originalStyle.Font.Name;
+
+                                if (originalStyle.Font.Size > 0)
+                                    cell.Style.Font.Size = originalStyle.Font.Size;
+
+                                cell.Style.Font.Bold = originalStyle.Font.Bold;
+                                cell.Style.Font.Italic = originalStyle.Font.Italic;
+                                cell.Style.Font.UnderLine = originalStyle.Font.UnderLine;
+                                cell.Style.Font.Strike = originalStyle.Font.Strike;
+
+                                if (originalStyle.Font.Color.Indexed > 0)
+                                    cell.Style.Font.Color.SetColor(
+                                        ColorTranslator.FromOle(originalStyle.Font.Color.Indexed));
+                                else if (!string.IsNullOrEmpty(originalStyle.Font.Color.Rgb))
+                                    cell.Style.Font.Color.SetColor(
+                                        ColorTranslator.FromHtml($"#{originalStyle.Font.Color.Rgb}"));
+
+                                // 恢复背景色和填充
+                                cell.Style.Fill.PatternType = originalStyle.Fill.PatternType;
+                                if (originalStyle.Fill.BackgroundColor.Indexed > 0)
+                                {
+                                    var color = ColorTranslator.FromOle(originalStyle.Fill.BackgroundColor.Indexed);
+                                    cell.Style.Fill.BackgroundColor.SetColor(color);
+                                }
+                                else if (!string.IsNullOrEmpty(originalStyle.Fill.BackgroundColor.Rgb))
+                                {
+                                    var color = ColorTranslator.FromHtml($"#{originalStyle.Fill.BackgroundColor.Rgb}");
+                                    cell.Style.Fill.BackgroundColor.SetColor(color);
+                                }
+
+                                // 恢复边框
+                                cell.Style.Border.Bottom.Style = originalStyle.Border.Bottom.Style;
+                                if (originalStyle.Border.Bottom.Color.Indexed > 0)
+                                {
+                                    var color = ColorTranslator.FromOle(originalStyle.Border.Bottom.Color.Indexed);
+                                    cell.Style.Border.Bottom.Color.SetColor(color);
+                                }
+                                else if (!string.IsNullOrEmpty(originalStyle.Border.Bottom.Color.Rgb))
+                                {
+                                    var color = ColorTranslator.FromHtml($"#{originalStyle.Border.Bottom.Color.Rgb}");
+                                    cell.Style.Border.Bottom.Color.SetColor(color);
+                                }
+
+                                cell.Style.Border.Top.Style = originalStyle.Border.Top.Style;
+                                cell.Style.Border.Left.Style = originalStyle.Border.Left.Style;
+                                cell.Style.Border.Right.Style = originalStyle.Border.Right.Style;
+
+                                // 恢复对齐方式
+                                cell.Style.HorizontalAlignment = originalStyle.Alignment.Horizontal;
+                                cell.Style.VerticalAlignment = originalStyle.Alignment.Vertical;
+                                cell.Style.WrapText = originalStyle.Alignment.WrapText;
+
+                                // 恢复数字格式
+                                if (!string.IsNullOrEmpty(originalStyle.NumberFormat))
+                                    cell.Style.Numberformat.Format = originalStyle.NumberFormat;
+                            }
                         }
                     }
 
                     // 第二轮：处理图片占位符
+                    // 图片处理不修改文本格式，保持不变...
                     for (var row = 1; row <= worksheet.Dimension.End.Row; row++)
                     for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
                     {
@@ -321,6 +519,12 @@ public class ExcelTemplateService
     {
         try
         {
+            // 保存单元格格式，以便在操作后恢复
+            var cell = worksheet.Cells[row, col];
+
+            // 记录单元格样式信息，以备需要
+            var cellStyle = cell.Style;
+
             using (var image = _imageProcessingService.LoadImageFromFile(imagePath))
             {
                 if (image == null) return;
@@ -329,20 +533,15 @@ public class ExcelTemplateService
                 var picName = $"Image_R{row}C{col}_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
                 var picture = worksheet.Drawings.AddPicture(picName, imagePath);
 
-                // 获取单元格位置和尺寸信息
-                var cell = worksheet.Cells[row, col];
-
                 // 更精确地计算单元格宽度（像素）
                 // EPPlus中列宽单位是字符数，1字符约等于8像素（标准字体下）
                 var columnWidthInChars = worksheet.Column(col).Width;
-                // 如果列宽为0（自动列宽），设置一个默认值
                 if (columnWidthInChars <= 0) columnWidthInChars = 10;
                 var cellWidthPx = columnWidthInChars * 8;
 
                 // 计算行高（像素）
                 // EPPlus中行高单位是点，1点约等于1.33像素
                 var rowHeightInPts = worksheet.Row(row).Height;
-                // 如果行高为0（自动行高），设置一个默认值
                 if (rowHeightInPts <= 0) rowHeightInPts = 15;
                 var cellHeightPx = rowHeightInPts * 1.33;
 
@@ -365,7 +564,6 @@ public class ExcelTemplateService
                         break;
                     case ImageFillMode.Stretch:
                         // 拉伸模式：独立缩放宽度和高度，完全填充单元格
-                        // 在后面单独处理
                         scale = 1.0; // 临时值，不会使用
                         break;
                     case ImageFillMode.Fit:
