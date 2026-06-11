@@ -1,126 +1,222 @@
+![DocTransform](https://socialify.git.ci/xihan123/DocTransform/image?description=1&forks=1&issues=1&language=1&name=1&owner=1&pulls=1&stargazers=1&theme=Auto)
+
+![.NET](https://img.shields.io/badge/.NET-9.0-blue.svg)
+![WPF](https://img.shields.io/badge/UI-WPF-5C2D91.svg)
+![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg)
+![版本](https://img.shields.io/github/v/release/xihan123/DocTransform)
+![下载量](https://img.shields.io/github/downloads/xihan123/DocTransform/total)
+[![.NET Desktop](https://github.com/xihan123/DocTransform/actions/workflows/dotnet-desktop.yml/badge.svg)](https://github.com/xihan123/DocTransform/actions/workflows/dotnet-desktop.yml)
+
 # DocTransform
 
-![版本](https://img.shields.io/github/v/release/xihan123/DocTransform)
-![语言](https://img.shields.io/badge/语言-C%23-brightgreen.svg)
-![许可证](https://img.shields.io/badge/许可证-MIT-orange.svg)
-![下载量](https://img.shields.io/github/downloads/xihan123/DocTransform/total)
+Excel 到 Word/Excel 模板的批量文档生成工具。
 
-## 📝 项目简介
+DocTransform 读取 `.xlsx` 数据源，将每一行数据填入 Word 或 Excel 模板中的 `{字段名}` 占位符，
+批量生成合同、证书、通知书、登记表等格式固定但内容不同的文档。
 
-DocTransform 是一款高效的 Excel 到 Word 数据映射应用程序，使用 C# 开发。它允许用户从 Excel 电子表格中提取数据，并将其映射到预定义的
-Word 文档模板中，从而快速生成格式化的文档报告。
+## 目录
 
-这个工具特别适合需要从 Excel 数据生成标准化 Word 文档的场景，如批量生成合同、报告、证书等文档处理任务。
+- [功能特性](#功能特性)
+- [环境要求](#环境要求)
+- [项目结构](#项目结构)
+- [安装](#安装)
+- [使用说明](#使用说明)
+  - [准备数据源](#准备数据源)
+  - [准备模板](#准备模板)
+  - [生成文档](#生成文档)
+  - [多表格模式](#多表格模式)
+  - [图片替换](#图片替换)
+  - [身份证信息提取](#身份证信息提取)
+- [验证与构建](#验证与构建)
+- [常见问题](#常见问题)
+- [许可证](#许可证)
 
-## ✨ 主要功能
+## 功能特性
 
-- **数据提取**: - 从 Excel 工作表中精确读取所需数据
-- **灵活映射**:
-    - 自动或手动将Excel中的数据列映射到Word模板中的占位符。
-    - 支持多种数据匹配模式，例如：
-        - **多表格模式**: 实现了多表格模式下的数据导入和匹配功能，支持多个Excel表格的数据导入、自动匹配、显示和操作，以及数据合并后的结果显示。
-- **批量处理** - 一次性处理多条数据记录，生成多个文档
-- **模板支持** - 使用预设 Word 、 Excel模板，保持输出文档的一致性
-- **用户友好界面** - 简洁直观的操作流程
-- **自定义配置** - 允许用户自定义映射规则和输出设置
+- **Excel 数据源**：读取 `.xlsx` 第一行表头和后续数据行，保留日期等常见单元格显示格式。
+- **Word 模板生成**：替换正文、表格、页眉、页脚中的 `{字段名}` 占位符，并尽量保留原有文字格式。
+- **Excel 模板生成**：替换工作簿中各工作表的 `{字段名}` 占位符，保留单元格样式。
+- **批量输出**：每条数据生成一份 Word、Excel，或同时生成两种文件。
+- **多表格模式**：导入多个工作表或多个 Excel 文件，按公共键列合并后再生成文档。
+- **输出文件名模板**：使用 `{姓名}_{序号}_{时间}` 这类模板生成文件名，并自动清理非法字符。
+- **图片替换**：把图片目录名作为 Excel 模板占位符，例如 `{头像}`，按指定列匹配图片文件。
+- **身份证字段**：可从身份证号列提取性别、出生日期、年龄、籍贯等常用字段。
+- **拖放导入**：支持把 Excel 数据源或 Word 模板拖到主窗口。
 
-## 🛠️ 技术栈
+## 环境要求
 
-- **C#**: 主要编程语言。
-- **WPF (Windows Presentation Foundation)**: 用于构建用户界面。
-- **.NET**: 开发框架。
+- Windows 10/11。
+- .NET 9 Desktop Runtime，或使用 Release 中已按当前发布配置打包的版本。
+- 可读写数据源、模板和输出目录的文件权限。
 
-## 💻 系统要求
+开发环境：
 
-- Windows 操作系统
-- .NET Framework 9.x
-- 足够的系统权限来读写文件
+- .NET SDK 9.0，仓库 `global.json` 当前指定 `9.0.203`。
+- Visual Studio 2022 或 Rider，需支持 .NET 9 WPF 项目。
 
-## 📥 安装说明
+## 安装
 
-### 直接下载
+从 Release 下载：
 
-1. 从 [Releases](https://github.com/xihan123/DocTransform/releases) 页面下载最新版本的安装包
-2. 解压下载的文件到您选择的目录
-3. 运行 `DocTransform-x64.exe` 启动应用程序
+1. 打开 [Releases](https://github.com/xihan123/DocTransform/releases)。
+2. 下载对应架构的压缩包或可执行文件。
+3. 解压后运行 `DocTransform-x64.exe` 或对应版本。
 
-## 📋 使用指南
+源码运行：
 
-### 基本用法
+```powershell
+dotnet restore DocTransform.sln
+dotnet build DocTransform.sln -c Debug
+dotnet run --project DocTransform.csproj
+```
 
-1. **准备数据和模板**
-    - 创建或准备包含所需数据的 Excel 文件
-    - 创建 Word 模板文档，在需要插入数据的位置添加占位符（例如 `{{字段名}}` 或 `[[字段名]]`）
+## 使用说明
 
-2. **启动应用程序**
-    - 运行 DocTransform.exe
+### 准备数据源
 
-3. **配置映射**
-    - 选择源 Excel 文件
-    - 选择目标 Word/Excel 模板
-    - 设置输出目录
-    - 配置字段映射关系
-    - 图片映射是将目录名作为占位符(例如 `{{图片}}`)放在模板中，程序会自动将 Excel 中的图片数据插入到对应位置
-    - 图片嵌入设置是指填充模式(如需填充头像，如2寸兔冠彩照大概是选择填充模式-填充比例65%左右,也和照片分辨率有关)
+数据源使用 `.xlsx` 文件。第一行作为列名，后续每一行作为一条记录。
 
-4. **生成文档**
-    - 点击"生成文档"按钮
-    - 等待处理完成
-    - 查看生成的 Word/Excel 文档(如果同时输入了Word和Excel模板，生成的文档会在输出目录下生成两个文件)
+示例：
 
-### 高级用法
+```text
+姓名 | 身份证号 | 部门 | 证书编号
+张三 | 110101199001011234 | 技术部 | A-001
+李四 | 110101199202022345 | 综合部 | A-002
+```
 
-- **批量处理**：选择 Excel 中的多行数据进行批量文档生成
-- **条件映射**：根据特定条件选择性地映射数据
-- **保存配置**：保存映射配置以便下次使用
-- **自定义输出**：配置输出文件的命名规则
+列名会直接对应模板占位符。上面的 `姓名` 列对应 `{姓名}`。
 
-## 🔍 常见问题
+### 准备模板
 
-**Q: 如何处理特殊格式的 Excel 数据?**  
-A: 在映射配置中，您可以指定数据格式转换规则。
+Word 和 Excel 模板都使用单层花括号占位符：
 
-**Q: 是否支持图片、表格等复杂元素的映射?**  
-A: 是的，支持将 Excel 中的图片数据和表格结构映射到 Word 文档中。现在还支持将本地指定目录映射到模板中
+```text
+姓名：{姓名}
+部门：{部门}
+证书编号：{证书编号}
+生成日期：{时间}
+```
 
-**Q: 能够批量处理多个 Excel 文件吗?**  
-A: ~~当前版本支持单次选择一个 Excel 文件，但可以处理文件中的多条数据记录。~~1.0.2+版本已支持批量处理多个 Excel 文件作为数据源。
+内置可用字段：
 
-## 🛠 故障排除
+```text
+{序号}
+{时间}
+{日期}
+```
 
-如果遇到问题，请尝试以下步骤：
+启用身份证信息提取后，还可以在模板中使用：
 
-1. 确保您使用的是最新版本的应用程序
-2. 检查 Excel 和 Word 文件格式是否受支持
-3. 验证占位符格式是否正确
-4. 查看日志文件（位于应用程序目录下的 `logs` 文件夹）
-5. 如果问题持续存在，请[提交 Issue](https://github.com/xihan123/DocTransform/issues/new)
+```text
+{身份证性别}
+{身份证出生日期}
+{身份证籍贯}
+{身份证年龄}
+{身份证出生年}
+{身份证出生月}
+{身份证出生日}
+```
 
-## 🤝 如何贡献
+### 生成文档
 
-我们欢迎任何形式的贡献！
+1. 选择 Excel 数据源。
+2. 选择 Word 模板，或启用并选择 Excel 模板。
+3. 选择输出目录。
+4. 设置输出文件名模板，例如 `{序号}_{姓名}_{时间}`。
+5. 点击 `生成文档`。
 
-1. Fork 本仓库
-2. 创建您的特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交您的更改 (`git commit -m '添加一些很棒的功能'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 打开一个 Pull Request
+如果同时选择 Word 模板和 Excel 模板，同一条数据会输出一份 `.docx` 和一份 `.xlsx`。
 
-## 📜 许可证
+### 多表格模式
 
-该项目采用 MIT 许可证 - 详情请参见 [LICENSE](LICENSE) 文件
+多表格模式用于把多个工作表或多个 Excel 文件合并成一份数据。
 
-## 👨‍💻 作者
+使用方式：
 
-[xihan123](https://github.com/xihan123)
+1. 打开 `多表格模式`。
+2. 添加 Excel 文件。
+3. 选择公共键列，例如 `身份证号`、`编号` 或 `姓名`。
+4. 确认合并后的字段列表，再生成文档。
 
-## 📊 项目状态
+公共键列必须存在于参与合并的表中。合并后字段同样使用 `{字段名}` 写入模板。
 
-![GitHub stars](https://img.shields.io/github/stars/xihan123/DocTransform?style=social)
-![GitHub forks](https://img.shields.io/github/forks/xihan123/DocTransform?style=social)
-![GitHub issues](https://img.shields.io/github/issues/xihan123/DocTransform)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/xihan123/DocTransform)
+### 图片替换
+
+图片替换只作用于 Excel 模板。
+
+使用方式：
+
+1. 启用 Excel 模板。
+2. 打开 `启用图片替换`。
+3. 添加图片目录，例如目录名为 `头像`。
+4. 在 Excel 模板中写入 `{头像}`。
+5. 选择用于匹配图片文件名的数据列，例如 `姓名` 或 `证书编号`。
+
+程序会扫描图片目录中的常见图片文件，并把匹配到的图片插入占位符所在单元格。
+图片填充模式可选择适应或填充，并可调整填充比例。
+
+### 身份证信息提取
+
+启用后选择身份证号所在列。生成时会把身份证号解析为性别、出生日期、年龄、籍贯等字段。
+
+身份证号解析失败时，对应字段会写入 `未知`，不会中断整批生成。
+
+## 验证与构建
+
+还原依赖：
+
+```powershell
+dotnet restore DocTransform.sln
+```
+
+Debug 构建：
+
+```powershell
+dotnet build DocTransform.sln -c Debug
+```
+
+Release 构建：
+
+```powershell
+dotnet build DocTransform.sln -c Release
+```
+
+发布 x64：
+
+```powershell
+dotnet publish DocTransform.csproj -c Release -r win-x64 --output ./publish-x64
+```
+
+发布 x86：
+
+```powershell
+dotnet publish DocTransform.csproj -c Release -r win-x86 --output ./publish-x86
+```
+
+## 常见问题
+
+### Q: 占位符应该写成什么格式？
+
+**A:** 使用单层花括号，例如 `{姓名}`。旧文档中的 `{{姓名}}`、`[[姓名]]` 不是当前实现使用的格式。
+
+### Q: Word 模板中表格、页眉、页脚里的占位符会替换吗？
+
+**A:** 会。程序会处理正文、表格、页眉和页脚中的占位符。
+
+### Q: 可以只生成 Excel，不生成 Word 吗？
+
+**A:** 可以。启用 Excel 模板并选择 `.xlsx` 模板即可。也可以同时选择 Word 模板和 Excel 模板。
+
+### Q: 图片为什么没有插入？
+
+**A:** 先检查三点：是否启用了 Excel 模板，模板中是否存在 `{目录名}` 占位符，图片目录是否设置了匹配列。
+
+### Q: 输出文件名重复怎么办？
+
+**A:** 建议在输出文件名模板中加入 `{序号}`、`{时间}` 或业务唯一字段，例如 `{证书编号}`。
+
+## 许可证
+
+本项目基于 [GNU General Public License v3.0](LICENSE) 发布。
 
 ---
-
-如果您觉得这个工具有用，请考虑给项目点个 ⭐️！
