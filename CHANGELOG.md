@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/xihan123/DocTransform/compare/v1.1.0...v1.2.0) (2026-06-11)
+
+
+### Features
+
+* **excel:** 优化Excel单元格日期格式化显示 ([12eb1f8](https://github.com/xihan123/DocTransform/commit/12eb1f89796628f738b49859b7187dd498776e4c))
+
 ## [1.1.0](https://github.com/xihan123/DocTransform/compare/v1.0.2...v1.1.0) (2025-05-27)
 
 
